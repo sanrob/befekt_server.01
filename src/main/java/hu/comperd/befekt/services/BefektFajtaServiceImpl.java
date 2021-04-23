@@ -59,12 +59,14 @@ public class BefektFajtaServiceImpl {
   }
 
   public List<BefektFajta> findAllKivalasztashoz() {
-    final List<BefektFajtaCol> befektFajtaCols = this.repository.findAllByOrderByBffKodDesc();
+    final List<BefektFajtaCol> befektFajtaCols = this.repository.findAllByOrderByBffKod();
     final List<BefektFajta> befektFajtak = new ArrayList<>();
     for (final BefektFajtaCol befektFajtaCol : befektFajtaCols) {
       final BefektFajta befektFajta = new BefektFajta();
       befektFajta.setBffKod(befektFajtaCol.getBffKod());
       befektFajta.setBffMegnev(befektFajtaCol.getBffMegnev() + "(" + befektFajtaCol.getBffKod() + ")");
+      befektFajta.setBffSzamla(befektFajtaCol.getBffSzamla());
+      befektFajta.setBffJutSzla(befektFajtaCol.getBffJutSzla());
       befektFajtak.add(befektFajta);
     }
     return befektFajtak;

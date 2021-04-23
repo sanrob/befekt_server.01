@@ -16,6 +16,8 @@ public class Befektetes {
   private String        befBffKod;
   /** Befektetés fajta megnevezése. */
   private String        befBffKodNev;
+  /** Határidős befekteté-e?. */
+  private boolean       befBffTip;
   /** Befektetett darabszám. */
   private double        befDarab;
   /** Nyitás árfolyama. */
@@ -28,6 +30,14 @@ public class Befektetes {
   private double        befJutErtek;
   /** Bekerülési érték. */
   private double        befBekerErtek;
+  /** Elszámolási számla kódja. */
+  private String        befElszSzla;
+  /** Elszámolási számla megnevezése. */
+  private String        befElszSzlaNev;
+  /** Jutalék számla kódja. */
+  private String        befJutSzla;
+  /** Jutalék számla megnevezése. */
+  private String        befJutSzlaNev;
   /** Könyvelés dátuma. */
   @JsonFormat(pattern = "yyyy-MM-dd")
   private LocalDate     befKonyvDat;
@@ -85,6 +95,14 @@ public class Befektetes {
     this.befBffKodNev = pBefBffKodNev;
   }
 
+  public boolean getBefBffTip() {
+    return this.befBffTip;
+  }
+
+  public void setBefBffTip(final boolean pBefBffTip) {
+    this.befBffTip = pBefBffTip;
+  }
+
   public double getBefDarab() {
     return this.befDarab;
   }
@@ -131,6 +149,38 @@ public class Befektetes {
 
   public void setBefBekerErtek(final double pBefBekerErtek) {
     this.befBekerErtek = pBefBekerErtek;
+  }
+
+  public String getBefElszSzla() {
+    return this.befElszSzla;
+  }
+
+  public void setBefElszSzla(final String pBefElszSzla) {
+    this.befElszSzla = pBefElszSzla;
+  }
+
+  public String getBefElszSzlaNev() {
+    return this.befElszSzlaNev;
+  }
+
+  public void setBefElszSzlaNev(final String pBefElszSzlaNev) {
+    this.befElszSzlaNev = pBefElszSzlaNev;
+  }
+
+  public String getBefJutSzla() {
+    return this.befJutSzla;
+  }
+
+  public void setBefJutSzla(final String pBefJutSzla) {
+    this.befJutSzla = pBefJutSzla;
+  }
+
+  public String getBefJutSzlaNev() {
+    return this.befJutSzlaNev;
+  }
+
+  public void setBefJutSzlaNev(final String pBefJutSzlaNev) {
+    this.befJutSzlaNev = pBefJutSzlaNev;
   }
 
   public LocalDate getBefKonyvDat() {

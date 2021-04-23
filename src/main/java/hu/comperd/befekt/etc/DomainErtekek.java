@@ -24,4 +24,7 @@ public class DomainErtekek {
   public static final String ALAP_DEVIZA      = "HUF";
   public static final String TRAJUTKON_HONNAN = "N";
   public static final String TRAJUTKON_HOVA   = "V";
+  public static final String BEFFAJTA_PROMPT  = "P";
+  public static final String BEFFAJTA_VETELI  = "V";
+  public static final String BEFFAJTA_ELADASI = "E";
 }

@@ -32,6 +32,10 @@ public class BefektZarasCol {
   private double        bezJutErtek;
   /** Bekerülési érték. */
   private double        bezRealErtek;
+  /** Elszámolási számla kódja. */
+  private String        bezElszSzla;
+  /** Jutalék számla kódja. */
+  private String        bezJutSzla;
   /** Könyvelés dátuma. */
   private LocalDate     bezKonyvDat;
   /** Le van-e már könyvelve. */
@@ -55,6 +59,8 @@ public class BefektZarasCol {
     this.bezJutSzaz = befektZaras.getBezJutSzaz();
     this.bezJutErtek = befektZaras.getBezJutErtek();
     this.bezRealErtek = befektZaras.getBezRealErtek();
+    this.bezElszSzla = befektZaras.getBezElszSzla();
+    this.bezJutSzla = befektZaras.getBezJutSzla();
     this.bezKonyvDat = befektZaras.getBezKonyvDat();
     this.bezMddat = ZonedDateTime.now(ZoneId.systemDefault());
   }
@@ -147,6 +153,22 @@ public class BefektZarasCol {
     this.bezRealErtek = pBezRealErtek;
   }
 
+  public String getBezElszSzla() {
+    return this.bezElszSzla;
+  }
+
+  public void setBezElszSzla(final String pBezElszSzla) {
+    this.bezElszSzla = pBezElszSzla;
+  }
+
+  public String getBezJutSzla() {
+    return this.bezJutSzla;
+  }
+
+  public void setBezJutSzla(final String pBezJutSzla) {
+    this.bezJutSzla = pBezJutSzla;
+  }
+
   public LocalDate getBezKonyvDat() {
     return this.bezKonyvDat;
   }
@@ -193,6 +215,8 @@ public class BefektZarasCol {
         + ", bez_jut_szaz=" + this.bezJutSzaz
         + ", bez_jut_ertek=" + this.bezJutErtek
         + ", bez_real_ertek=" + this.bezRealErtek
+        + ", bez_elsz_szla=" + this.bezElszSzla
+        + ", bez_jut_szla=" + this.bezJutSzla
         + ", bez_konyv_dat=" + this.bezKonyvDat
         + ", bez_konyvelve=" + this.bezKonyvelve
         + ", bez_par_darab=" + this.bezParDarab

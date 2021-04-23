@@ -139,4 +139,15 @@ public class BefektetesServiceController extends BaseController {
     }
     return new ResponseEntity<>("Határidős elszámolás tétel számlakönyvelése sikeres!", HttpStatus.OK);
   }
+
+  @PutMapping(value = "/hatelszszlakonytorles/{id}/{mddat}")
+  public ResponseEntity<Object> szlakonyvTorlesHatelsz(@PathVariable("id") final String id,
+                                                       @PathVariable("mddat") final String mddat) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.hatElszSzamlaForgTorl(id, mddat));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Határidős elszámolás számlakönyvelésének törlése sikeres!", HttpStatus.OK);
+  }
 }

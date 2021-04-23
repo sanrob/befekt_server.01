@@ -28,6 +28,14 @@ public class BefektZaras {
   private double        bezJutErtek;
   /** Bekerülési érték. */
   private double        bezRealErtek;
+  /** Elszámolási számla kódja. */
+  private String        bezElszSzla;
+  /** Elszámolási számla megnevezése. */
+  private String        bezElszSzlaNev;
+  /** Jutalék számla kódja. */
+  private String        bezJutSzla;
+  /** Jutalék számla megnevezése. */
+  private String        bezJutSzlaNev;
   /** Könyvelés dátuma. */
   @JsonFormat(pattern = "yyyy-MM-dd")
   private LocalDate     bezKonyvDat;
@@ -128,6 +136,38 @@ public class BefektZaras {
 
   public void setBezRealErtek(final double pBezRealErtek) {
     this.bezRealErtek = pBezRealErtek;
+  }
+
+  public String getBezElszSzla() {
+    return this.bezElszSzla;
+  }
+
+  public void setBezElszSzla(final String pBezElszSzla) {
+    this.bezElszSzla = pBezElszSzla;
+  }
+
+  public String getBezElszSzlaNev() {
+    return this.bezElszSzlaNev;
+  }
+
+  public void setBezElszSzlaNev(final String pBezElszSzlaNev) {
+    this.bezElszSzlaNev = pBezElszSzlaNev;
+  }
+
+  public String getBezJutSzla() {
+    return this.bezJutSzla;
+  }
+
+  public void setBezJutSzla(final String pBezJutSzla) {
+    this.bezJutSzla = pBezJutSzla;
+  }
+
+  public String getBezJutSzlaNev() {
+    return this.bezJutSzlaNev;
+  }
+
+  public void setBezJutSzlaNev(final String pBezJutSzlaNev) {
+    this.bezJutSzlaNev = pBezJutSzlaNev;
   }
 
   public LocalDate getBezKonyvDat() {

@@ -33,7 +33,7 @@ public class BefektetesServiceImpl {
   @Autowired
   private BefektFajtaRepository         befFajtaRepo;
   @Autowired
-  AlapAdatokServiceImpl                 alapAdatokService = null;
+  private final AlapAdatokServiceImpl   alapAdatokService = null;
   @Autowired
   private SzamlaKonyveles               szamlaKonyveles;
   @Autowired
@@ -46,6 +46,8 @@ public class BefektetesServiceImpl {
   private HataridosElszamolasRepository hatElszRepo;
   @Autowired
   private DomainRepository              domrepo;
+  @Autowired
+  private SzamlaRepository              szlaRepo;
 
   public List<Befektetes> findAll(final String konyvEv) {
     final List<BefektetesCol> befektetesCols = this.repository.findAllByBefEvOrderByBefDatumDesc(Integer.parseInt(konyvEv));
@@ -56,13 +58,19 @@ public class BefektetesServiceImpl {
       befektetes.setBefAzon(befektetesCol.getBefAzon());
       befektetes.setBefDatum(befektetesCol.getBefDatum());
       befektetes.setBefBffKod(befektetesCol.getBefBffKod());
-      befektetes.setBefBffKodNev(befFajtaRepo.findByBffKod(befektetesCol.getBefBffKod()).getBffMegnev());
+      final BefektFajtaCol befektFajtaCol = this.befFajtaRepo.findByBffKod(befektetesCol.getBefBffKod());
+      befektetes.setBefBffKodNev(befektFajtaCol.getBffMegnev());
+      befektetes.setBefBffTip(!DomainErtekek.BEFFAJTA_PROMPT.equals(befektFajtaCol.getBffTip()));
       befektetes.setBefDarab(befektetesCol.getBefDarab());
       befektetes.setBefArfolyam(befektetesCol.getBefArfolyam());
       befektetes.setBefErtek(befektetesCol.getBefErtek());
       befektetes.setBefJutSzaz(befektetesCol.getBefJutSzaz());
       befektetes.setBefJutErtek(befektetesCol.getBefJutErtek());
       befektetes.setBefBekerErtek(befektetesCol.getBefBekerErtek());
+      befektetes.setBefElszSzla(befektetesCol.getBefElszSzla());
+      befektetes.setBefElszSzlaNev(this.szlaRepo.findBySzaKod(befektetesCol.getBefElszSzla()).getSzaMegnev());
+      befektetes.setBefJutSzla(befektetesCol.getBefJutSzla());
+      befektetes.setBefJutSzlaNev(this.szlaRepo.findBySzaKod(befektetesCol.getBefJutSzla()).getSzaMegnev());
       befektetes.setBefKonyvDat(befektetesCol.getBefKonyvDat());
       befektetes.setBefKonyvelve(befektetesCol.isBefKonyvelve());
       befektetes.setBefLezDat(befektetesCol.getBefLezDat());
@@ -96,6 +104,8 @@ public class BefektetesServiceImpl {
         befekteteslCol.setBefJutSzaz(befektetes.getBefJutSzaz());
         befekteteslCol.setBefJutErtek(befektetes.getBefJutErtek());
         befekteteslCol.setBefBekerErtek(befektetes.getBefBekerErtek());
+        befekteteslCol.setBefElszSzla(befektetes.getBefElszSzla());
+        befekteteslCol.setBefJutSzla(befektetes.getBefJutSzla());
         befekteteslCol.setBefKonyvDat(befektetes.getBefKonyvDat());
         befekteteslCol.setBefMddat(ZonedDateTime.now(ZoneId.systemDefault()));
         this.repository.save(befekteteslCol);
@@ -128,21 +138,27 @@ public class BefektetesServiceImpl {
       final BefektetesCol befektetesCol = befektetesObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
       if (befektetesCol.getBefMddat().equals(pMddat)) {
-        SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
-        szamlaKonyv.setSzfForgDat(befektetesCol.getBefKonyvDat());
         final BefektFajtaCol befektFajtaCol = befFajtaRepo.findByBffKod(befektetesCol.getBefBffKod());
-        szamlaKonyv.setSzfSzaAzon(befektFajtaCol.getBffSzamla());
-        szamlaKonyv.setSzfSzoveg("Vételi pozíció - " + befektFajtaCol.getBffMegnev());
-        szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_BN);
-        szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_VETEL);
-        szamlaKonyv.setSzfHivBizAzon(befektetesCol.getBefAzon());
-        szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_KOVETEL);
-        szamlaKonyv.setSzfOsszeg(befektetesCol.getBefErtek());
-        this.szamlaKonyveles.konyveles(szamlaKonyv);
-        if (Math.round(befektetesCol.getBefJutErtek() * 100) / 100 > 0) {
+        SzamlaKonyvTmp szamlaKonyv;
+        if (Math.round(befektetesCol.getBefErtek() * 100) > 0) {
           szamlaKonyv = new SzamlaKonyvTmp();
           szamlaKonyv.setSzfForgDat(befektetesCol.getBefKonyvDat());
-          szamlaKonyv.setSzfSzaAzon(befektFajtaCol.getBffJutSzla());
+          szamlaKonyv.setSzfSzaAzon(befektetesCol.getBefElszSzla());
+          szamlaKonyv.setSzfSzoveg("Vételi pozíció - " + befektFajtaCol.getBffMegnev());
+          szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_BN);
+          szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_VETEL);
+          szamlaKonyv.setSzfHivBizAzon(befektetesCol.getBefAzon());
+          final String tkjel = DomainErtekek.BEFFAJTA_ELADASI.equals(befektFajtaCol.getBffTip())
+              ? DomainErtekek.TKJEL_TARTOZIK
+              : DomainErtekek.TKJEL_KOVETEL;
+          szamlaKonyv.setSzfTKJel(tkjel);
+          szamlaKonyv.setSzfOsszeg(befektetesCol.getBefErtek());
+          this.szamlaKonyveles.konyveles(szamlaKonyv);
+        }
+        if (Math.round(befektetesCol.getBefJutErtek() * 100) > 0) {
+          szamlaKonyv = new SzamlaKonyvTmp();
+          szamlaKonyv.setSzfForgDat(befektetesCol.getBefKonyvDat());
+          szamlaKonyv.setSzfSzaAzon(befektetesCol.getBefJutSzla());
           szamlaKonyv.setSzfSzoveg("Vételi pozíció - " + befektFajtaCol.getBffMegnev());
           szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_JU);
           szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_VETEL);
@@ -240,8 +256,7 @@ public class BefektetesServiceImpl {
         final Optional<BefektetesCol> befektetesObj = this.repository.findById(osztalekCol.getOszBefektetesId());
         if (befektetesObj.isPresent()) {
           final BefektetesCol befektetesCol = befektetesObj.get();
-          final BefektFajtaCol befektFajtaCol = befFajtaRepo.findByBffKod(befektetesCol.getBefBffKod());
-          szamla = befektFajtaCol.getBffSzamla();
+          szamla = befektetesCol.getBefElszSzla();
         }
         SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
         szamlaKonyv.setSzfForgDat(osztalekCol.getOszDatum());
@@ -350,18 +365,33 @@ public class BefektetesServiceImpl {
   }
 
   public Object createHatElsz(final HataridosElszamolas hataridosElszamolas) {
+    HataridosElszamolasCol hataridosElszamolasCol;
     if (Util.isEmpty(hataridosElszamolas.getId())) {
+      hataridosElszamolasCol = new HataridosElszamolasCol(hataridosElszamolas);
       final BefektetesCol befektetesCol = this.repository.findById(hataridosElszamolas.getHatNyitoId()).get();
-      hataridosElszamolas.setHatNyitoAzon(befektetesCol.getBefAzon());
+      hataridosElszamolasCol.setHatNyitoAzon(befektetesCol.getBefAzon());
       final BefektFajtaCol befektFajtaCol = this.befFajtaRepo.findByBffKod(befektetesCol.getBefBffKod());
-      hataridosElszamolas.setHatTipus(befektFajtaCol.getBffTip());
+      hataridosElszamolasCol.setHatTipus(befektFajtaCol.getBffTip());
+      final int sorszam = this.alapAdatokService.getNextBizSorsz(
+          DomainErtekek.BIZTIP_HATARIDO, hataridosElszamolasCol.getHatElszDatum().getYear());
+      hataridosElszamolasCol.setHatAzon(
+          DomainErtekek.BIZTIP_HATARIDO + hataridosElszamolasCol.getHatElszDatum().getYear()
+              + Util.padl(Integer.toString(sorszam), 4, '0'));
+    } else {
+      hataridosElszamolasCol = this.hatElszRepo.findById(hataridosElszamolas.getId()).get();
+      if (hataridosElszamolasCol.getHatMddat().toInstant().equals(hataridosElszamolas.getHatMddat().toInstant())) {
+        hataridosElszamolasCol.setHatNyitoAzon(hataridosElszamolas.getHatNyitoAzon());
+        hataridosElszamolasCol.setHatDarab(hataridosElszamolas.getHatDarab());
+        hataridosElszamolasCol.setHatElozoArf(hataridosElszamolas.getHatElozoArf());
+        hataridosElszamolasCol.setHatElszArf(hataridosElszamolas.getHatElszArf());
+        hataridosElszamolasCol.setHatElszOsszeg(hataridosElszamolas.getHatElszOsszeg());
+        hataridosElszamolasCol.setHatHatSzamla(hataridosElszamolas.getHatHatSzamla());
+        hataridosElszamolasCol.setHatElszSzamla(hataridosElszamolas.getHatElszSzamla());
+        hataridosElszamolasCol.setHatMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      } else {
+        return new MegvaltozottTartalomException("Határidős elszámolás", "update");
+      }
     }
-    final HataridosElszamolasCol hataridosElszamolasCol = new HataridosElszamolasCol(hataridosElszamolas);
-    final int sorszam = this.alapAdatokService.getNextBizSorsz(
-        DomainErtekek.BIZTIP_HATARIDO, hataridosElszamolas.getHatElszDatum().getYear());
-    hataridosElszamolasCol.setHatAzon(
-        DomainErtekek.BIZTIP_HATARIDO + hataridosElszamolas.getHatElszDatum().getYear()
-            + Util.padl(Integer.toString(sorszam), 4, '0'));
     this.hatElszRepo.save(hataridosElszamolasCol);
     logger.info("Created Record: {}", hataridosElszamolasCol);
     return null;
@@ -373,6 +403,8 @@ public class BefektetesServiceImpl {
       final HataridosElszamolasCol hatElszCol = hatElszObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
       if (hatElszCol.getHatMddat().equals(pMddat)) {
+        final boolean veteli = DomainErtekek.BEFFAJTA_VETELI.equals(hatElszCol.getHatTipus());
+        final boolean arfolyamNo = Math.round(hatElszCol.getHatElszOsszeg() * 100) > 0;
         SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
         szamlaKonyv.setSzfForgDat(hatElszCol.getHatElszDatum());
         szamlaKonyv.setSzfSzaAzon(hatElszCol.getHatHatSzamla());
@@ -380,9 +412,9 @@ public class BefektetesServiceImpl {
         szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_HI);
         szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_HATARIDO);
         szamlaKonyv.setSzfHivBizAzon(hatElszCol.getHatAzon());
-        String tkjel = Math.round(hatElszCol.getHatElszOsszeg() * 100) > 0
-            ? DomainErtekek.TKJEL_KOVETEL
-            : DomainErtekek.TKJEL_TARTOZIK;
+        String tkjel = veteli
+            ? (arfolyamNo ? DomainErtekek.TKJEL_KOVETEL : DomainErtekek.TKJEL_TARTOZIK)
+            : (arfolyamNo ? DomainErtekek.TKJEL_TARTOZIK : DomainErtekek.TKJEL_KOVETEL);
         szamlaKonyv.setSzfTKJel(tkjel);
         szamlaKonyv.setSzfOsszeg(Math.abs(hatElszCol.getHatElszOsszeg()));
         this.szamlaKonyveles.konyveles(szamlaKonyv);
@@ -393,7 +425,7 @@ public class BefektetesServiceImpl {
         szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_HI);
         szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_HATARIDO);
         szamlaKonyv.setSzfHivBizAzon(hatElszCol.getHatAzon());
-        tkjel = Math.round(hatElszCol.getHatElszOsszeg() * 100) > 0
+        tkjel = DomainErtekek.TKJEL_KOVETEL.equals(tkjel)
             ? DomainErtekek.TKJEL_TARTOZIK
             : DomainErtekek.TKJEL_KOVETEL;
         szamlaKonyv.setSzfTKJel(tkjel);
@@ -405,6 +437,30 @@ public class BefektetesServiceImpl {
         logger.info("Számlakönyvelt Record: {}", hatElszCol);
       } else {
         return new MegvaltozottTartalomException("Határidős elszámolás", "számlakönyvelés");
+      }
+    }
+    return null;
+  }
+
+  public Object hatElszSzamlaForgTorl(final String id, final String mddat) {
+    final Optional<HataridosElszamolasCol> hataridosElszamolasObj = this.hatElszRepo.findById(id);
+    if (hataridosElszamolasObj.isPresent()) {
+      final HataridosElszamolasCol hataridosElszamolasCol = hataridosElszamolasObj.get();
+      final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
+      if (hataridosElszamolasCol.getHatMddat().equals(pMddat)) {
+        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+            DomainErtekek.BIZTIP_HATARIDO, hataridosElszamolasCol.getHatAzon());
+        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+          this.szlaForgRepo.delete(szlaForgTetel);
+        }
+        hataridosElszamolasCol.setHatKonyvelve(false);
+        hataridosElszamolasCol.setHatMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+        this.hatElszRepo.save(hataridosElszamolasCol);
+        logger.info("Számlakönyvelés törölve Record: {}", hataridosElszamolasCol);
+      } else {
+        return new MegvaltozottTartalomException("Határidős elszámolás", "számlakönyvelés törlése");
       }
     }
     return null;

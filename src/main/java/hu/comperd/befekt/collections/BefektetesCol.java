@@ -32,6 +32,10 @@ public class BefektetesCol {
   private double        befJutErtek;
   /** Bekerülési érték. */
   private double        befBekerErtek;
+  /** Elszámolási számla kódja. */
+  private String        befElszSzla;
+  /** Jutalék számla kódja. */
+  private String        befJutSzla;
   /** Könyvelés dátuma. */
   private LocalDate     befKonyvDat;
   /** Le van-e már könyvelve. */
@@ -57,6 +61,8 @@ public class BefektetesCol {
     this.befJutSzaz = befektetes.getBefJutSzaz();
     this.befJutErtek = befektetes.getBefJutErtek();
     this.befBekerErtek = befektetes.getBefBekerErtek();
+    this.befElszSzla = befektetes.getBefElszSzla();
+    this.befJutSzla = befektetes.getBefJutSzla();
     this.befKonyvDat = befektetes.getBefKonyvDat();
     this.befMddat = ZonedDateTime.now(ZoneId.systemDefault());
   }
@@ -149,6 +155,22 @@ public class BefektetesCol {
     this.befBekerErtek = pBefBekerErtek;
   }
 
+  public String getBefElszSzla() {
+    return this.befElszSzla;
+  }
+
+  public void setBefElszSzla(final String pBefElszSzla) {
+    this.befElszSzla = pBefElszSzla;
+  }
+
+  public String getBefJutSzla() {
+    return this.befJutSzla;
+  }
+
+  public void setBefJutSzla(final String pBefJutSzla) {
+    this.befJutSzla = pBefJutSzla;
+  }
+
   public LocalDate getBefKonyvDat() {
     return this.befKonyvDat;
   }
@@ -203,6 +225,8 @@ public class BefektetesCol {
         + ", bef_jut_szaz=" + this.befJutSzaz
         + ", bef_jut_ertek=" + this.befJutErtek
         + ", bef_beker_ertek=" + this.befBekerErtek
+        + ", bef_elsz_szla=" + this.befElszSzla
+        + ", bef_jut_szla=" + this.befJutSzla
         + ", bef_konyv_dat=" + this.befKonyvDat
         + ", bef_konyvelve=" + this.befKonyvelve
         + ", bef_lez_dat=" + this.befLezDat

@@ -63,6 +63,10 @@ public class BefektZarasServiceImpl {
       befektZaras.setBezJutSzaz(befektZarasCol.getBezJutSzaz());
       befektZaras.setBezJutErtek(befektZarasCol.getBezJutErtek());
       befektZaras.setBezRealErtek(befektZarasCol.getBezRealErtek());
+      befektZaras.setBezElszSzla(befektZarasCol.getBezElszSzla());
+      befektZaras.setBezElszSzlaNev(this.szarepo.findBySzaKod(befektZarasCol.getBezElszSzla()).getSzaMegnev());
+      befektZaras.setBezJutSzla(befektZarasCol.getBezJutSzla());
+      befektZaras.setBezJutSzlaNev(this.szarepo.findBySzaKod(befektZarasCol.getBezJutSzla()).getSzaMegnev());
       befektZaras.setBezKonyvDat(befektZarasCol.getBezKonyvDat());
       befektZaras.setBezKonyvelve(befektZarasCol.isBezKonyvelve());
       befektZaras.setBezParDarab(befektZarasCol.getBezParDarab());
@@ -95,6 +99,8 @@ public class BefektZarasServiceImpl {
         befektZarasCol.setBezJutSzaz(befektZaras.getBezJutSzaz());
         befektZarasCol.setBezJutErtek(befektZaras.getBezJutErtek());
         befektZarasCol.setBezRealErtek(befektZaras.getBezRealErtek());
+        befektZarasCol.setBezElszSzla(befektZaras.getBezElszSzla());
+        befektZarasCol.setBezJutSzla(befektZaras.getBezJutSzla());
         befektZarasCol.setBezKonyvDat(befektZaras.getBezKonyvDat());
         befektZarasCol.setBezMddat(ZonedDateTime.now(ZoneId.systemDefault()));
         this.repository.save(befektZarasCol);
@@ -130,18 +136,21 @@ public class BefektZarasServiceImpl {
         SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
         szamlaKonyv.setSzfForgDat(befektZarasCol.getBezKonyvDat());
         final BefektFajtaCol befektFajtaCol = befFajtaRepo.findByBffKod(befektZarasCol.getBezBffKod());
-        szamlaKonyv.setSzfSzaAzon(befektFajtaCol.getBffSzamla());
+        szamlaKonyv.setSzfSzaAzon(befektZarasCol.getBezElszSzla());
         szamlaKonyv.setSzfSzoveg("Zárási pozíció - " + befektFajtaCol.getBffMegnev());
         szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_BZ);
         szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_ZARAS);
         szamlaKonyv.setSzfHivBizAzon(befektZarasCol.getBezAzon());
-        szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_TARTOZIK);
+        final String tkjel = DomainErtekek.BEFFAJTA_ELADASI.equals(befektFajtaCol.getBffTip())
+            ? DomainErtekek.TKJEL_KOVETEL
+            : DomainErtekek.TKJEL_TARTOZIK;
+        szamlaKonyv.setSzfTKJel(tkjel);
         szamlaKonyv.setSzfOsszeg(befektZarasCol.getBezErtek());
         this.szamlaKonyveles.konyveles(szamlaKonyv);
         if (Math.round(befektZarasCol.getBezJutErtek() * 100) > 0) {
           szamlaKonyv = new SzamlaKonyvTmp();
           szamlaKonyv.setSzfForgDat(befektZarasCol.getBezKonyvDat());
-          szamlaKonyv.setSzfSzaAzon(befektFajtaCol.getBffJutSzla());
+          szamlaKonyv.setSzfSzaAzon(befektZarasCol.getBezJutSzla());
           szamlaKonyv.setSzfSzoveg("Zárási pozíció - " + befektFajtaCol.getBffMegnev());
           szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_JU);
           szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_ZARAS);
