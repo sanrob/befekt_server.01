@@ -36,6 +36,8 @@ public class HataridosElszamolas {
   private String        hatElszSzamla;
   /** Határidős elszámoló számla neve. */
   private String        hatElszSzamlaNev;
+  /** Migráció utáni tétel mentés megtörtént-e. */
+  private boolean       hatMentve;
   /** Könyvelve van-e. */
   private boolean       hatKonyvelve;
   /** Utolsó módosítás ideje. */
@@ -163,6 +165,14 @@ public class HataridosElszamolas {
 
   public void setHatElszSzamlaNev(final String pHatElszSzamlaNev) {
     this.hatElszSzamlaNev = pHatElszSzamlaNev;
+  }
+
+  public boolean isHatMentve() {
+    return this.hatMentve;
+  }
+
+  public void setHatMentve(final boolean pHatMentve) {
+    this.hatMentve = pHatMentve;
   }
 
   public boolean isHatKonyvelve() {

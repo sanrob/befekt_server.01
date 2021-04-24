@@ -353,10 +353,12 @@ public class BefektetesServiceImpl {
           this.szarepo.findBySzaKod(hataridosElszamolasCol.getHatElszSzamla()).getSzaMegnev());
       hataridosElszamolas.setHatKonyvelve(hataridosElszamolasCol.isHatKonyvelve());
       hataridosElszamolas.setHatMddat(hataridosElszamolasCol.getHatMddat());
+      hataridosElszamolas.setHatMentve(true);
       if ("yyy".contentEquals(hataridosElszamolas.getHatNyitoAzon())) {
         hataridosElszamolas.setHatNyitoAzon(befektetesCol.getBefAzon());
         hataridosElszamolas.setHatDarab(darab);
         hataridosElszamolas.setHatElozoArf(eloarf);
+        hataridosElszamolas.setHatMentve(false);
       }
       eloarf = hataridosElszamolas.getHatElszArf();
       hataridosElszamolasok.add(hataridosElszamolas);
