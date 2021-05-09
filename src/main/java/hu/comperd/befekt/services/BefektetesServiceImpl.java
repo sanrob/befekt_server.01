@@ -326,11 +326,12 @@ public class BefektetesServiceImpl {
   }
 
   public List<HataridosElszamolas> findAllHatElsz(final String befektId) {
-    final List<HataridosElszamolasCol> hataridosElszamolasCols = this.hatElszRepo.findAllByHatNyitoId(befektId);
+    final List<HataridosElszamolasCol> hataridosElszamolasCols = this.hatElszRepo
+        .findAllByHatNyitoIdOrderByHatElszDatumDescHatAzonDesc(befektId);
     final BefektetesCol befektetesCol = this.repository.findById(befektId).get();
     final double darab = befektetesCol.getBefDarab() - befektetesCol.getBefParDarab();
-    double eloarf = befektetesCol.getBefArfolyam();
     final List<HataridosElszamolas> hataridosElszamolasok = new ArrayList<>();
+    HataridosElszamolas feTetel = null;
     for (final HataridosElszamolasCol hataridosElszamolasCol : hataridosElszamolasCols) {
       final HataridosElszamolas hataridosElszamolas = new HataridosElszamolas();
       hataridosElszamolas.setId(hataridosElszamolasCol.getId());
@@ -357,11 +358,16 @@ public class BefektetesServiceImpl {
       if ("yyy".contentEquals(hataridosElszamolas.getHatNyitoAzon())) {
         hataridosElszamolas.setHatNyitoAzon(befektetesCol.getBefAzon());
         hataridosElszamolas.setHatDarab(darab);
-        hataridosElszamolas.setHatElozoArf(eloarf);
         hataridosElszamolas.setHatMentve(false);
       }
-      eloarf = hataridosElszamolas.getHatElszArf();
+      if (feTetel != null && Math.round(feTetel.getHatElozoArf() * 100) == 0) {
+        feTetel.setHatElozoArf(hataridosElszamolas.getHatElszArf());
+      }
+      feTetel = hataridosElszamolas;
       hataridosElszamolasok.add(hataridosElszamolas);
+    }
+    if (feTetel != null && Math.round(feTetel.getHatElozoArf() * 100) == 0) {
+      feTetel.setHatElozoArf(befektetesCol.getBefArfolyam());
     }
     return hataridosElszamolasok;
   }
@@ -396,6 +402,21 @@ public class BefektetesServiceImpl {
     }
     this.hatElszRepo.save(hataridosElszamolasCol);
     logger.info("Created Record: {}", hataridosElszamolasCol);
+    return null;
+  }
+
+  public Object deleteHatElsz(final String id, final String mddat) {
+    final Optional<HataridosElszamolasCol> hataridosElszamolasObj = this.hatElszRepo.findById(id);
+    if (hataridosElszamolasObj.isPresent()) {
+      final HataridosElszamolasCol hataridosElszamolasCol = hataridosElszamolasObj.get();
+      final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
+      if (hataridosElszamolasCol.getHatMddat().equals(pMddat)) {
+        this.hatElszRepo.deleteById(id);
+        logger.info("Deleted Record: {}", hataridosElszamolasCol);
+      } else {
+        return new MegvaltozottTartalomException("Határidős elszámolás", "törlés");
+      }
+    }
     return null;
   }
 

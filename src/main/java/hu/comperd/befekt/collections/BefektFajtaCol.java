@@ -17,6 +17,8 @@ public class BefektFajtaCol {
   private String        bffMegnev;
   /** Befektetés fajta típusa: Prompt/Határidő. */
   private String        bffTip;
+  /** Hozamfizetés fajtája: Kamat/Osztalék/Nincs hozam. */
+  private String        bffHozam;
   /** Befektetés fajtához tartozó elszámolási számla. */
   private String        bffSzamla;
   /** Befektetés jutalékának elszámolási számlája. */
@@ -36,6 +38,7 @@ public class BefektFajtaCol {
     this.bffKod = befektFajta.getBffKod();
     this.bffMegnev = befektFajta.getBffMegnev();
     this.bffTip = befektFajta.getBffTip();
+    this.bffHozam = befektFajta.getBffHozam();
     this.bffSzamla = befektFajta.getBffSzamla();
     this.bffJutSzla = befektFajta.getBffJutSzla();
     this.bffEgyseg = befektFajta.getBffEgyseg();
@@ -73,6 +76,14 @@ public class BefektFajtaCol {
 
   public void setBffTip(final String pBffTip) {
     this.bffTip = pBffTip;
+  }
+
+  public String getBffHozam() {
+    return this.bffHozam;
+  }
+
+  public void setBffHozam(final String pBffHozam) {
+    this.bffHozam = pBffHozam;
   }
 
   public String getBffSzamla() {
@@ -122,6 +133,7 @@ public class BefektFajtaCol {
         + ", bff_kod=" + this.bffKod
         + ", bff_megnev=" + this.bffMegnev
         + ", bff_tip=" + this.bffTip
+        + ", bff_hozam=" + this.bffHozam
         + ", bff_szamla=" + this.bffSzamla
         + ", bff_jutSzla=" + this.bffJutSzla
         + ", bff_egyseg=" + this.bffEgyseg

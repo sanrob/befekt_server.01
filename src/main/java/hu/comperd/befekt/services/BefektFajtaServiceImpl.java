@@ -44,6 +44,11 @@ public class BefektFajtaServiceImpl {
       befektFajta.setBffTip(befektFajtaCol.getBffTip());
       befektFajta.setBffTipNev(
           domrepo.findByDomCsoportKodAndDomKod(DomainCsoportok.BEFFAJTTIP, befektFajtaCol.getBffTip()).getDomMegnev());
+      befektFajta.setBffHozam(befektFajtaCol.getBffHozam());
+      if (befektFajta.getBffHozam() != null) {
+        befektFajta.setBffHozamNev(
+            domrepo.findByDomCsoportKodAndDomKod(DomainCsoportok.HOZAMFAJTA, befektFajtaCol.getBffHozam()).getDomMegnev());
+      }
       befektFajta.setBffSzamla(befektFajtaCol.getBffSzamla());
       befektFajta.setBffSzamlaNev(szarepo.findBySzaKod(befektFajtaCol.getBffSzamla()).getSzaMegnev());
       befektFajta.setBffJutSzla(befektFajtaCol.getBffJutSzla());
@@ -91,6 +96,8 @@ public class BefektFajtaServiceImpl {
         befektFajtaCol.setBffKod(befektFajta.getBffKod());
         befektFajtaCol.setBffMegnev(befektFajta.getBffMegnev());
         befektFajtaCol.setBffTip(befektFajta.getBffTip());
+        befektFajtaCol.setBffHozam(befektFajta.getBffHozam());
+        befektFajtaCol.setBffHozam(befektFajta.getBffHozam());
         befektFajtaCol.setBffSzamla(befektFajta.getBffSzamla());
         befektFajtaCol.setBffJutSzla(befektFajta.getBffJutSzla());
         befektFajtaCol.setBffEgyseg(befektFajta.getBffEgyseg());

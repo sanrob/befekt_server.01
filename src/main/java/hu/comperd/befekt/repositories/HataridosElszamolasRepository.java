@@ -8,5 +8,5 @@ public interface HataridosElszamolasRepository extends MongoRepository<Hataridos
 
   public List<HataridosElszamolasCol> findAllByHatNyitoAzon(String nyitAzon);
 
-  public List<HataridosElszamolasCol> findAllByHatNyitoId(String nyitoId);
+  public List<HataridosElszamolasCol> findAllByHatNyitoIdOrderByHatElszDatumDescHatAzonDesc(String nyitoId);
 }

@@ -9,4 +9,5 @@ public class DomainCsoportok {
   public static final String BEFELSZAM   = "BEFELSZAM";
   public static final String KIADTIPUS   = "KIADTIPUS";
   public static final String TRAJUTKON   = "TRAJUTKON";
+  public static final String HOZAMFAJTA  = "HOZAMFAJTA";
 }

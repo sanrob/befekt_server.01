@@ -13,6 +13,10 @@ public class BefektFajta {
   private String        bffTip;
   /** Befektetés fajta típusának megnevezése: Prompt/Határidő. */
   private String        bffTipNev;
+  /** Hozamfizetés fajtája: Kamat/Osztalék/Nincs hozam. */
+  private String        bffHozam;
+  /** Hozamfizetés fajtájának megnevezése. */
+  private String        bffHozamNev;
   /** Befektetés fajtához tartozó elszámolási számla. */
   private String        bffSzamla;
   /** Befektetés fajtához tartozó elszámolási számla megnevezése. */
@@ -72,6 +76,22 @@ public class BefektFajta {
 
   public void setBffTipNev(final String pBffTipNev) {
     this.bffTipNev = pBffTipNev;
+  }
+
+  public String getBffHozam() {
+    return this.bffHozam;
+  }
+
+  public void setBffHozam(final String pBffHozam) {
+    this.bffHozam = pBffHozam;
+  }
+
+  public String getBffHozamNev() {
+    return this.bffHozamNev;
+  }
+
+  public void setBffHozamNev(final String pBffHozamNev) {
+    this.bffHozamNev = pBffHozamNev;
   }
 
   public String getBffSzamla() {

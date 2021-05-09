@@ -129,6 +129,17 @@ public class BefektetesServiceController extends BaseController {
     return new ResponseEntity<>("Hataridős elszámolás is saved successfully", HttpStatus.OK);
   }
 
+  @DeleteMapping(value = "/deleteHatelsz/{id}/{mddat}")
+  public ResponseEntity<Object> deleteHatelsz(@PathVariable("id") final String id,
+                                              @PathVariable("mddat") final String mddat) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.deleteHatElsz(id, mddat));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Határidős elszámolás is deleted successfully", HttpStatus.OK);
+  }
+
   @PutMapping(value = "/hatelszszlakonyveles/{id}/{mddat}")
   public ResponseEntity<Object> szlakonyvHatElsz(@PathVariable("id") final String id,
                                                  @PathVariable("mddat") final String mddat) {
