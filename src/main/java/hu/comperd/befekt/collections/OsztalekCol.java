@@ -1,6 +1,7 @@
 package hu.comperd.befekt.collections;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -49,7 +50,7 @@ public class OsztalekCol {
     this.oszAdo = osztalek.getOszAdo();
     this.oszAdoSzamla = osztalek.getOszAdoSzamla();
     this.oszKonyvelve = osztalek.isOszKonyvelve();
-    this.oszMddat = osztalek.getOszMddat();
+    this.oszMddat = ZonedDateTime.now(ZoneId.systemDefault());
   }
 
   public String getId() {

@@ -1,17 +1,22 @@
 package hu.comperd.befekt.services;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import hu.comperd.befekt.collections.BizonylatSorszamCol;
 import hu.comperd.befekt.collections.DomainCol;
-import hu.comperd.befekt.collections.KonyvelesiEvCol;
+import hu.comperd.befekt.collections.HonapZarasaCol;
 import hu.comperd.befekt.dto.Domain;
 import hu.comperd.befekt.dto.KonyvelesiEv;
+import hu.comperd.befekt.dto.SystemParams;
 import hu.comperd.befekt.repositories.AlapAdatokRepository;
 import hu.comperd.befekt.repositories.BizonylatSorszamRepository;
 import hu.comperd.befekt.repositories.DomainRepository;
+import hu.comperd.befekt.repositories.HonapZarasaRepository;
+import hu.comperd.befekt.repositories.SystemParamsRepository;
 
 @Service
 public class AlapAdatokServiceImpl {
@@ -22,25 +27,19 @@ public class AlapAdatokServiceImpl {
   private BizonylatSorszamRepository bizSorszRepo;
   @Autowired
   private DomainRepository           domainRepo;
+  @Autowired
+  private SystemParamsRepository     sysParRepo;
+  @Autowired
+  private HonapZarasaRepository      honZarRepo;
 
   public List<KonyvelesiEv> findAll() {
-    final List<KonyvelesiEvCol> konyvelesiEvCols = this.konyvEvREpo.findAllByOrderByKonEvDesc();
-    final List<KonyvelesiEv> konyvelesiEvek = new ArrayList<>();
-    for (final KonyvelesiEvCol konyvelesiEvCol : konyvelesiEvCols) {
-      final KonyvelesiEv konyvelesiEv = new KonyvelesiEv();
-      konyvelesiEv.setId(konyvelesiEvCol.getId());
-      konyvelesiEv.setKonEv(konyvelesiEvCol.getKonEv());
-      konyvelesiEvek.add(konyvelesiEv);
-    }
-    return konyvelesiEvek;
+    return this.konyvEvREpo.findAllByOrderByKonEvDesc().stream().parallel().map(KonyvelesiEv::new).collect(Collectors.toList());
   }
 
   public synchronized int getNextBizSorsz(final String bizTipus, final int bizEv) {
-    BizonylatSorszamCol bizonylatSorszamCol = null;
     int ret = 0;
-    final List<BizonylatSorszamCol> bizonylatSorszamok = this.bizSorszRepo.findOneByBizTipusAndBizEv(bizTipus, bizEv);
-    if (!bizonylatSorszamok.isEmpty()) {
-      bizonylatSorszamCol = bizonylatSorszamok.get(0);
+    final BizonylatSorszamCol bizonylatSorszamCol = this.bizSorszRepo.findOneByBizTipusAndBizEv(bizTipus, bizEv);
+    if (bizonylatSorszamCol != null) {
       bizonylatSorszamCol.setBizSorszam(bizonylatSorszamCol.getBizSorszam() + 1);
       ret = bizonylatSorszamCol.getBizSorszam();
       this.bizSorszRepo.save(bizonylatSorszamCol);
@@ -60,5 +59,14 @@ public class AlapAdatokServiceImpl {
       domains.add(domain);
     }
     return domains;
+  }
+
+  public SystemParams findSystemParams() {
+    return this.sysParRepo.findAll().stream().map(SystemParams::new).findFirst().get();
+  }
+
+  public boolean isIdoszakLezart(final LocalDate datum) {
+    final HonapZarasaCol honapZarasaCol = this.honZarRepo.findOneByHozHonap(datum.toString().substring(0, 7));
+    return honapZarasaCol == null ? true : honapZarasaCol.isHozZarasJel();
   }
 }

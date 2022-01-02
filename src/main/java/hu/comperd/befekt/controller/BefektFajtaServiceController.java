@@ -11,8 +11,10 @@ import hu.comperd.befekt.exceptions.BefektFajtaAlreadyExitException;
 import hu.comperd.befekt.exceptions.BefektFajtaCannotDeleteException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.services.BefektFajtaServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Befektetés fajták")
 @RequestMapping(value = "/befektfajtak")
 public class BefektFajtaServiceController extends BaseController {
   @Autowired

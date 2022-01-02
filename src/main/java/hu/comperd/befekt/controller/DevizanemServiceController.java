@@ -11,8 +11,10 @@ import hu.comperd.befekt.exceptions.DevizanemAlreadyExitException;
 import hu.comperd.befekt.exceptions.DevizanemCannotDeleteException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.services.DevizanemServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Devizanemek")
 @RequestMapping(value = "/devizanemek")
 public class DevizanemServiceController extends BaseController {
   @Autowired

@@ -12,8 +12,10 @@ import hu.comperd.befekt.dto.BefektetesEgyenleg;
 import hu.comperd.befekt.dto.SzamlaEgyenleg;
 import hu.comperd.befekt.etc.Response;
 import hu.comperd.befekt.services.KimutatasServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Kimutatások")
 @RequestMapping(value = "/kimutatasok")
 public class KimutatasokServiceController extends BaseController {
 

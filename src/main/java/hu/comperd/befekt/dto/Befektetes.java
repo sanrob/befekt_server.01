@@ -16,8 +16,10 @@ public class Befektetes {
   private String        befBffKod;
   /** Befektetés fajta megnevezése. */
   private String        befBffKodNev;
-  /** Határidős befekteté-e?. */
-  private boolean       befBffTip;
+  /** Befektetés típusa. */
+  private String        befBffTip;
+  /** Kamatot vagy osztalékot fizet-e?. */
+  private String        befBffHozam;
   /** Befektetett darabszám. */
   private double        befDarab;
   /** Nyitás árfolyama. */
@@ -50,6 +52,8 @@ public class Befektetes {
   private double        befParDarab;
   /** Utolsó módosítás ideje. */
   private ZonedDateTime befMddat;
+  /** Kamat/Osztalék lett-e elszámolva. */
+  private boolean       befKamOsztElsz;
 
   public Befektetes() {
     //
@@ -95,12 +99,20 @@ public class Befektetes {
     this.befBffKodNev = pBefBffKodNev;
   }
 
-  public boolean getBefBffTip() {
+  public String getBefBffTip() {
     return this.befBffTip;
   }
 
-  public void setBefBffTip(final boolean pBefBffTip) {
+  public void setBefBffTip(final String pBefBffTip) {
     this.befBffTip = pBefBffTip;
+  }
+
+  public String getBefBffHozam() {
+    return this.befBffHozam;
+  }
+
+  public void setBefBffHozam(final String pBefBffHozam) {
+    this.befBffHozam = pBefBffHozam;
   }
 
   public double getBefDarab() {
@@ -221,5 +233,13 @@ public class Befektetes {
 
   public void setBefMddat(final ZonedDateTime pBefMddat) {
     this.befMddat = pBefMddat;
+  }
+
+  public boolean isBefKamOsztElsz() {
+    return this.befKamOsztElsz;
+  }
+
+  public void setBefKamOsztElsz(final boolean pBefKamOsztElsz) {
+    this.befKamOsztElsz = pBefKamOsztElsz;
   }
 }

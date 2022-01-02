@@ -22,6 +22,9 @@ public class HozamBeallito {
   private double        hobZaroJutalek;
   /** Nettó hozam. */
   private double        hobNettoHozam;
+  /** Adó könyvelés dátuma. */
+  @JsonFormat(pattern = "yyyy-MM-dd")
+  private LocalDate     hobAdoDatum;
   /** Adó %-a. */
   private double        hobAdoSzaz;
   /** Adó mértéke. */
@@ -105,6 +108,14 @@ public class HozamBeallito {
 
   public void setHobNettoHozam(final double pHobNettoHozam) {
     this.hobNettoHozam = pHobNettoHozam;
+  }
+
+  public LocalDate getHobAdoDatum() {
+    return this.hobAdoDatum;
+  }
+
+  public void setHobAdoDatum(final LocalDate pHobAdoDatum) {
+    this.hobAdoDatum = pHobAdoDatum;
   }
 
   public double getHobAdoSzaz() {

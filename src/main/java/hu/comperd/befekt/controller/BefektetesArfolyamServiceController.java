@@ -9,8 +9,10 @@ import hu.comperd.befekt.dto.BefektetesArfolyam;
 import hu.comperd.befekt.etc.Response;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.services.BefektetesArfolyamServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Befektetés árfolyamok")
 @RequestMapping(value = "/befektetesarfolyam")
 public class BefektetesArfolyamServiceController extends BaseController {
   @Autowired

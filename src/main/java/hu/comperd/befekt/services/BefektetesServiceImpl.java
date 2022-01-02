@@ -9,17 +9,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import hu.comperd.befekt.collections.BefektFajtaCol;
-import hu.comperd.befekt.collections.BefektetesCol;
-import hu.comperd.befekt.collections.HataridosElszamolasCol;
-import hu.comperd.befekt.collections.OsztalekCol;
-import hu.comperd.befekt.collections.SzamlaForgalomCol;
+import hu.comperd.befekt.collections.*;
 import hu.comperd.befekt.dto.Befektetes;
 import hu.comperd.befekt.dto.HataridosElszamolas;
+import hu.comperd.befekt.dto.Kamat;
 import hu.comperd.befekt.dto.Osztalek;
 import hu.comperd.befekt.etc.DomainCsoportok;
 import hu.comperd.befekt.etc.DomainErtekek;
 import hu.comperd.befekt.etc.SzamlaKonyvTmp;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.repositories.*;
 import hu.comperd.befekt.util.Util;
@@ -48,6 +46,8 @@ public class BefektetesServiceImpl {
   private DomainRepository              domrepo;
   @Autowired
   private SzamlaRepository              szlaRepo;
+  @Autowired
+  private KamatRepository               kamatRepo;
 
   public List<Befektetes> findAll(final String konyvEv) {
     final List<BefektetesCol> befektetesCols = this.repository.findAllByBefEvOrderByBefDatumDesc(Integer.parseInt(konyvEv));
@@ -60,7 +60,8 @@ public class BefektetesServiceImpl {
       befektetes.setBefBffKod(befektetesCol.getBefBffKod());
       final BefektFajtaCol befektFajtaCol = this.befFajtaRepo.findByBffKod(befektetesCol.getBefBffKod());
       befektetes.setBefBffKodNev(befektFajtaCol.getBffMegnev());
-      befektetes.setBefBffTip(!DomainErtekek.BEFFAJTA_PROMPT.equals(befektFajtaCol.getBffTip()));
+      befektetes.setBefBffTip(befektFajtaCol.getBffTip());
+      befektetes.setBefBffHozam(befektFajtaCol.getBffHozam());
       befektetes.setBefDarab(befektetesCol.getBefDarab());
       befektetes.setBefArfolyam(befektetesCol.getBefArfolyam());
       befektetes.setBefErtek(befektetesCol.getBefErtek());
@@ -76,12 +77,18 @@ public class BefektetesServiceImpl {
       befektetes.setBefLezDat(befektetesCol.getBefLezDat());
       befektetes.setBefParDarab(befektetesCol.getBefParDarab());
       befektetes.setBefMddat(befektetesCol.getBefMddat());
+      befektetes.setBefKamOsztElsz(
+          !this.osztalekRepo.findAllByOszBefektetesIdOrderByOszDatumDescOszAzonDesc(befektetes.getId()).isEmpty());
       befektetesek.add(befektetes);
     }
     return befektetesek;
   }
 
   public Object create(final Befektetes befektetes) {
+    if (alapAdatokService.isIdoszakLezart(befektetes.getBefKonyvDat())) {
+      return new KonyvelesiIdoszakLezartException(befektetes.getBefKonyvDat().toString().substring(0, 7),
+          "pozíció nyitás fölvitele");
+    }
     final BefektetesCol befektetesCol = new BefektetesCol(befektetes);
     final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_VETEL, befektetes.getBefDatum().getYear());
     befektetesCol.setBefAzon(
@@ -92,6 +99,10 @@ public class BefektetesServiceImpl {
   }
 
   public Object update(final Befektetes befektetes) {
+    if (alapAdatokService.isIdoszakLezart(befektetes.getBefKonyvDat())) {
+      return new KonyvelesiIdoszakLezartException(befektetes.getBefKonyvDat().toString().substring(0, 7),
+          "pozíció nyitás módosítása");
+    }
     final Optional<BefektetesCol> befektetesObj = this.repository.findById(befektetes.getId());
     if (befektetesObj.isPresent()) {
       final BefektetesCol befekteteslCol = befektetesObj.get();
@@ -183,38 +194,33 @@ public class BefektetesServiceImpl {
     if (befektetesObj.isPresent()) {
       final BefektetesCol befektetesCol = befektetesObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
-      if (befektetesCol.getBefMddat().equals(pMddat)) {
-        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
-            DomainErtekek.BIZTIP_VETEL, befektetesCol.getBefAzon());
-        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
-              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
-          this.szlaForgRepo.delete(szlaForgTetel);
-        }
-        befektetesCol.setBefKonyvelve(false);
-        befektetesCol.setBefMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-        this.repository.save(befektetesCol);
-        logger.info("Számlakönyvelés törölve Record: {}", befektetesCol);
-      } else {
+      if (!befektetesCol.getBefMddat().equals(pMddat)) {
         return new MegvaltozottTartalomException("Befektetés", "számlakönyvelés törlése");
       }
+      if (this.alapAdatokService.isIdoszakLezart(befektetesCol.getBefKonyvDat())) {
+        return new KonyvelesiIdoszakLezartException(
+            befektetesCol.getBefKonyvDat().toString().substring(0, 7), "befektetés számlakönyvelésének törlése");
+      }
+      final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+          DomainErtekek.BIZTIP_VETEL, befektetesCol.getBefAzon());
+      for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+        this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+            szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+        this.szlaForgRepo.delete(szlaForgTetel);
+      }
+      befektetesCol.setBefKonyvelve(false);
+      befektetesCol.setBefMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      this.repository.save(befektetesCol);
+      logger.info("Számlakönyvelés törölve Record: {}", befektetesCol);
     }
     return null;
   }
 
-  public Osztalek findOsztalekBeallito(final String befektId) {
-    Osztalek osztalek = null;
-    final OsztalekCol osztalekCol = this.osztalekRepo.findByOszBefektetesId(befektId);
-    if (osztalekCol == null) {
-      final Optional<BefektetesCol> befektetesObj = this.repository.findById(befektId);
-      if (befektetesObj.isPresent()) {
-        final BefektetesCol befektetesCol = befektetesObj.get();
-        osztalek = new Osztalek();
-        osztalek.setOszBefektetesId(befektetesCol.getId());
-        osztalek.setOszBefDarab(befektetesCol.getBefDarab() - befektetesCol.getBefParDarab());
-      }
-    } else {
-      osztalek = new Osztalek();
+  public List<Osztalek> findAllOsztalek(final String befektId) {
+    final List<OsztalekCol> osztalekCols = this.osztalekRepo.findAllByOszBefektetesIdOrderByOszDatumDescOszAzonDesc(befektId);
+    final List<Osztalek> osztalekok = new ArrayList<>();
+    for (final OsztalekCol osztalekCol : osztalekCols) {
+      final Osztalek osztalek = new Osztalek();
       osztalek.setId(osztalekCol.getId());
       osztalek.setOszBefektetesId(osztalekCol.getOszBefektetesId());
       osztalek.setOszAzon(osztalekCol.getOszAzon());
@@ -228,21 +234,52 @@ public class BefektetesServiceImpl {
       osztalek.setOszAdoSzamlaNev(this.szarepo.findBySzaKod(osztalekCol.getOszAdoSzamla()).getSzaMegnev());
       osztalek.setOszKonyvelve(osztalekCol.isOszKonyvelve());
       osztalek.setOszMddat(osztalekCol.getOszMddat());
+      osztalekok.add(osztalek);
     }
-    return osztalek;
+    return osztalekok;
   }
 
   public Object osztalekTarolas(final Osztalek osztalek) {
-    final OsztalekCol osztalekCol = new OsztalekCol(osztalek);
-    if (osztalekCol.getId() == null || osztalekCol.getId().length() == 0) {
+    OsztalekCol osztalekCol;
+    if (Util.isEmpty(osztalek.getId())) {
+      osztalekCol = new OsztalekCol(osztalek);
       final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_OSZTALEK,
           osztalekCol.getOszDatum().getYear());
       osztalekCol.setOszAzon(
           DomainErtekek.BIZTIP_OSZTALEK + osztalekCol.getOszDatum().getYear() + Util.padl(Integer.toString(sorszam), 4, '0'));
+    } else {
+      osztalekCol = this.osztalekRepo.findById(osztalek.getId()).get();
+      if (osztalekCol.getOszMddat().toInstant().equals(osztalek.getOszMddat().toInstant())) {
+        osztalekCol.setOszDatum(osztalek.getOszDatum());
+        osztalekCol.setOszBefDarab(osztalek.getOszBefDarab());
+        osztalekCol.setOszMertek(osztalek.getOszMertek());
+        osztalekCol.setOszOsszeg(osztalek.getOszOsszeg());
+        osztalekCol.setOszAdoSzaz(osztalek.getOszAdoSzaz());
+        osztalekCol.setOszAdo(osztalek.getOszAdo());
+        osztalekCol.setOszAdoSzamla(osztalek.getOszAdoSzamla());
+        osztalekCol.setOszKonyvelve(osztalek.isOszKonyvelve());
+        osztalekCol.setOszMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      } else {
+        return new MegvaltozottTartalomException("Osztalék elszámolás", "update");
+      }
     }
-    osztalekCol.setOszMddat(ZonedDateTime.now(ZoneId.systemDefault()));
     this.osztalekRepo.save(osztalekCol);
     logger.info("Created Record: {}", osztalekCol);
+    return null;
+  }
+
+  public Object osztalekTorles(final String id, final String mddat) {
+    final Optional<OsztalekCol> osztalekObj = this.osztalekRepo.findById(id);
+    if (osztalekObj.isPresent()) {
+      final OsztalekCol osztalekCol = osztalekObj.get();
+      final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
+      if (osztalekCol.getOszMddat().equals(pMddat)) {
+        this.osztalekRepo.deleteById(id);
+        logger.info("Deleted Record: {}", osztalekCol);
+      } else {
+        return new MegvaltozottTartalomException("Osztalék", "törlés");
+      }
+    }
     return null;
   }
 
@@ -488,4 +525,153 @@ public class BefektetesServiceImpl {
     }
     return null;
   }
+
+  public List<Kamat> findAllKamat(final String befektId) {
+    final List<KamatCol> kamatCols = this.kamatRepo.findAllByKamBefektetesIdOrderByKamDatumDescKamAzonDesc(befektId);
+    final List<Kamat> kamatok = new ArrayList<>();
+    /*
+    for (final OsztalekCol osztalekCol : osztalekCols) {
+      final Osztalek osztalek = new Osztalek();
+      osztalek.setId(osztalekCol.getId());
+      osztalek.setOszBefektetesId(osztalekCol.getOszBefektetesId());
+      osztalek.setOszAzon(osztalekCol.getOszAzon());
+      osztalek.setOszDatum(osztalekCol.getOszDatum());
+      osztalek.setOszBefDarab(osztalekCol.getOszBefDarab());
+      osztalek.setOszMertek(osztalekCol.getOszMertek());
+      osztalek.setOszOsszeg(osztalekCol.getOszOsszeg());
+      osztalek.setOszAdoSzaz(osztalekCol.getOszAdoSzaz());
+      osztalek.setOszAdo(osztalekCol.getOszAdo());
+      osztalek.setOszAdoSzamla(osztalekCol.getOszAdoSzamla());
+      osztalek.setOszAdoSzamlaNev(this.szarepo.findBySzaKod(osztalekCol.getOszAdoSzamla()).getSzaMegnev());
+      osztalek.setOszKonyvelve(osztalekCol.isOszKonyvelve());
+      osztalek.setOszMddat(osztalekCol.getOszMddat());
+      osztalekok.add(osztalek);
+    }
+    */
+    return kamatok;
+  }
+  /*
+  public Object osztalekTarolas(final Osztalek osztalek) {
+    OsztalekCol osztalekCol;
+    if (Util.isEmpty(osztalek.getId())) {
+      osztalekCol = new OsztalekCol(osztalek);
+      final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_OSZTALEK,
+          osztalekCol.getOszDatum().getYear());
+      osztalekCol.setOszAzon(
+          DomainErtekek.BIZTIP_OSZTALEK + osztalekCol.getOszDatum().getYear() + Util.padl(Integer.toString(sorszam), 4, '0'));
+    } else {
+      osztalekCol = this.osztalekRepo.findById(osztalek.getId()).get();
+      if (osztalekCol.getOszMddat().toInstant().equals(osztalek.getOszMddat().toInstant())) {
+        osztalekCol.setOszDatum(osztalek.getOszDatum());
+        osztalekCol.setOszBefDarab(osztalek.getOszBefDarab());
+        osztalekCol.setOszMertek(osztalek.getOszMertek());
+        osztalekCol.setOszOsszeg(osztalek.getOszOsszeg());
+        osztalekCol.setOszAdoSzaz(osztalek.getOszAdoSzaz());
+        osztalekCol.setOszAdo(osztalek.getOszAdo());
+        osztalekCol.setOszAdoSzamla(osztalek.getOszAdoSzamla());
+        osztalekCol.setOszKonyvelve(osztalek.isOszKonyvelve());
+        osztalekCol.setOszMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      } else {
+        return new MegvaltozottTartalomException("Osztalék elszámolás", "update");
+      }
+    }
+    this.osztalekRepo.save(osztalekCol);
+    logger.info("Created Record: {}", osztalekCol);
+    return null;
+  }
+  
+  public Object osztalekTorles(final String id, final String mddat) {
+    final Optional<OsztalekCol> osztalekObj = this.osztalekRepo.findById(id);
+    if (osztalekObj.isPresent()) {
+      final OsztalekCol osztalekCol = osztalekObj.get();
+      final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
+      if (osztalekCol.getOszMddat().equals(pMddat)) {
+        this.osztalekRepo.deleteById(id);
+        logger.info("Deleted Record: {}", osztalekCol);
+      } else {
+        return new MegvaltozottTartalomException("Osztalék", "törlés");
+      }
+    }
+    return null;
+  }
+  
+  public Object osztalekSzamlaForgGen(final String id, final String mddat) {
+    final Optional<OsztalekCol> osztalekObj = this.osztalekRepo.findById(id);
+    if (osztalekObj.isPresent()) {
+      final OsztalekCol osztalekCol = osztalekObj.get();
+      final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
+      if (osztalekCol.getOszMddat().equals(pMddat)) {
+        String szamla = null;
+        final Optional<BefektetesCol> befektetesObj = this.repository.findById(osztalekCol.getOszBefektetesId());
+        if (befektetesObj.isPresent()) {
+          final BefektetesCol befektetesCol = befektetesObj.get();
+          szamla = befektetesCol.getBefElszSzla();
+        }
+        SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
+        szamlaKonyv.setSzfForgDat(osztalekCol.getOszDatum());
+        szamlaKonyv.setSzfSzaAzon(szamla);
+        szamlaKonyv.setSzfSzoveg("Osztalek");
+        szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_OS);
+        szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_OSZTALEK);
+        szamlaKonyv.setSzfHivBizAzon(osztalekCol.getOszAzon());
+        szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_TARTOZIK);
+        szamlaKonyv.setSzfOsszeg(Math.abs(osztalekCol.getOszOsszeg()));
+        this.szamlaKonyveles.konyveles(szamlaKonyv);
+        if (Math.round(osztalekCol.getOszAdo() * 100) != 0) {
+          szamlaKonyv = new SzamlaKonyvTmp();
+          szamlaKonyv.setSzfForgDat(osztalekCol.getOszDatum());
+          szamlaKonyv.setSzfSzaAzon(szamla);
+          szamlaKonyv.setSzfSzoveg("Osztalek");
+          szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_OS);
+          szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_OSZTALEK);
+          szamlaKonyv.setSzfHivBizAzon(osztalekCol.getOszAzon());
+          szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_KOVETEL);
+          szamlaKonyv.setSzfOsszeg(Math.abs(osztalekCol.getOszAdo()));
+          this.szamlaKonyveles.konyveles(szamlaKonyv);
+          szamlaKonyv = new SzamlaKonyvTmp();
+          szamlaKonyv.setSzfForgDat(osztalekCol.getOszDatum());
+          szamlaKonyv.setSzfSzaAzon(osztalekCol.getOszAdoSzamla());
+          szamlaKonyv.setSzfSzoveg("Osztalek");
+          szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_OS);
+          szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_OSZTALEK);
+          szamlaKonyv.setSzfHivBizAzon(osztalekCol.getOszAzon());
+          szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_TARTOZIK);
+          szamlaKonyv.setSzfOsszeg(Math.abs(osztalekCol.getOszAdo()));
+          this.szamlaKonyveles.konyveles(szamlaKonyv);
+        }
+        osztalekCol.setOszKonyvelve(true);
+        osztalekCol.setOszMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+        this.osztalekRepo.save(osztalekCol);
+        logger.info("Számlakönyvelt Record: {}", osztalekCol);
+      } else {
+        return new MegvaltozottTartalomException("Osztalek", "számlakönyvelés");
+      }
+    }
+    return null;
+  }
+  
+  public Object osztalekSzamlaForgTorl(final String id, final String mddat) {
+    final Optional<OsztalekCol> osztalekObj = this.osztalekRepo.findById(id);
+    if (osztalekObj.isPresent()) {
+      final OsztalekCol osztalekCol = osztalekObj.get();
+      final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
+      if (osztalekCol.getOszMddat().equals(pMddat)) {
+        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+            DomainErtekek.BIZTIP_OSZTALEK, osztalekCol.getOszAzon());
+        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+          this.szlaForgRepo.delete(szlaForgTetel);
+        }
+        osztalekCol.setOszKonyvelve(false);
+        osztalekCol.setOszMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+        this.osztalekRepo.save(osztalekCol);
+        logger.info("Számlakönyvelés törölve Record: {}", osztalekCol);
+      } else {
+        return new MegvaltozottTartalomException("Osztalek", "számlakönyvelés törlése");
+      }
+    }
+    return null;
+  }
+  */
 }

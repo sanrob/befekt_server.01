@@ -11,4 +11,6 @@ public interface KiadasRepository extends MongoRepository<KiadasCol, String> {
   public List<KiadasCol> findAllByKiaEvOrderByKiaDatumDesc(int kiaEv);
 
   public List<KiadasCol> findByKiaSzamla(String kiaSzamla);
+
+  public List<KiadasCol> findAllByKiaEvAndKiaSzlaKonyv(final int kiaEv, final boolean kiaSzlaKonyv);
 }

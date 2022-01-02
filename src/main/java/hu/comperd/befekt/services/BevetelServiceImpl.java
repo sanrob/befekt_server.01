@@ -14,6 +14,7 @@ import hu.comperd.befekt.collections.SzamlaForgalomCol;
 import hu.comperd.befekt.dto.Bevetel;
 import hu.comperd.befekt.etc.DomainErtekek;
 import hu.comperd.befekt.etc.SzamlaKonyvTmp;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.repositories.BevetelRepository;
@@ -56,6 +57,9 @@ public class BevetelServiceImpl {
   }
 
   public Object create(final Bevetel bevetel) {
+    if (alapAdatokService.isIdoszakLezart(bevetel.getBevDatum())) {
+      return new KonyvelesiIdoszakLezartException(bevetel.getBevDatum().toString().substring(0, 7), "bevétel fölvitele");
+    }
     final BevetelCol bevetelCol = new BevetelCol(bevetel);
     final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_BEVETEL, bevetel.getBevDatum().getYear());
     bevetelCol.setBevAzon(
@@ -66,6 +70,9 @@ public class BevetelServiceImpl {
   }
 
   public Object update(final Bevetel bevetel) {
+    if (alapAdatokService.isIdoszakLezart(bevetel.getBevDatum())) {
+      return new KonyvelesiIdoszakLezartException(bevetel.getBevDatum().toString().substring(0, 7), "bevétel módosítása");
+    }
     final Optional<BevetelCol> bevetelObj = this.repository.findById(bevetel.getId());
     if (bevetelObj.isPresent()) {
       final BevetelCol bevetelCol = bevetelObj.get();
@@ -131,31 +138,33 @@ public class BevetelServiceImpl {
     if (bevetelObj.isPresent()) {
       final BevetelCol bevetelCol = bevetelObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
-      if (bevetelCol.getBevMddat().equals(pMddat)) {
-        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
-            DomainErtekek.BIZTIP_BEVETEL, bevetelCol.getBevAzon());
-        String parosAzon = null;
-        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-          if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
-            parosAzon = szlaForgTetel.getSzfAzon();
-          }
-        }
-        if (parosAzon == null) {
-          for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-            this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
-                szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
-            this.szlaForgRepo.delete(szlaForgTetel);
-          }
-          bevetelCol.setBevSzlaKonyv(false);
-          bevetelCol.setBevMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-          this.repository.save(bevetelCol);
-          logger.info("Számlakönyvelés törölve Record: {}", bevetelCol);
-        } else {
-          return new ParositottSzamlaforgalmiTetelException(parosAzon);
-        }
-      } else {
+      if (!bevetelCol.getBevMddat().equals(pMddat)) {
         return new MegvaltozottTartalomException("Bevétel", "számlakönyvelés törlése");
       }
+      if (this.alapAdatokService.isIdoszakLezart(bevetelCol.getBevDatum())) {
+        return new KonyvelesiIdoszakLezartException(
+            bevetelCol.getBevDatum().toString().substring(0, 7), "bevétel számlakönyvelésének törlése");
+      }
+      final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+          DomainErtekek.BIZTIP_BEVETEL, bevetelCol.getBevAzon());
+      String parosAzon = null;
+      for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+        if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
+          parosAzon = szlaForgTetel.getSzfAzon();
+        }
+      }
+      if (parosAzon != null) {
+        return new ParositottSzamlaforgalmiTetelException(parosAzon);
+      }
+      for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+        this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+            szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+        this.szlaForgRepo.delete(szlaForgTetel);
+      }
+      bevetelCol.setBevSzlaKonyv(false);
+      bevetelCol.setBevMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      this.repository.save(bevetelCol);
+      logger.info("Számlakönyvelés törölve Record: {}", bevetelCol);
     }
     return null;
   }

@@ -11,4 +11,10 @@ public interface BefektZarasRepository extends MongoRepository<BefektZarasCol, S
   public List<BefektZarasCol> findAllByBezEvOrderByBezDatumDesc(int bezEv);
 
   public List<BefektZarasCol> findByBezBffKod(String bffKod);
+
+  public List<BefektZarasCol> findAllByBezElszSzla(String szaKod);
+
+  public List<BefektZarasCol> findAllByBezJutSzla(String szaKod);
+
+  public List<BefektZarasCol> findAllByBezEvAndBezKonyvelve(final int bezEv, final boolean bezKonyvelve);
 }

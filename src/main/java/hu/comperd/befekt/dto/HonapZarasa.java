@@ -1,6 +1,8 @@
 package hu.comperd.befekt.dto;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import hu.comperd.befekt.collections.HonapZarasaCol;
 
 public class HonapZarasa {
   /** Azonosító. */
@@ -9,11 +11,24 @@ public class HonapZarasa {
   private String        hozHonap;
   /** Lezárás jelző. */
   private boolean       hozZarasJel;
+  /** Általános kiadás tételek generálva vannak-e. */
+  private boolean       hozAltKiadGeneralva;
+  /** Generált kiadás tétel azonosítók. */
+  private String        hozAltKiadAzonositok;
   /** Utolsó módosítás ideje. */
-  private ZonedDateTime hozMddat;
+  private LocalDateTime hozMddat;
 
   public HonapZarasa() {
     //
+  }
+
+  public HonapZarasa(final HonapZarasaCol honapZarasaCol) {
+    this.id = honapZarasaCol.getId();
+    this.hozHonap = honapZarasaCol.getHozHonap();
+    this.hozZarasJel = honapZarasaCol.isHozZarasJel();
+    this.hozAltKiadGeneralva = honapZarasaCol.isHozAltKiadGeneralva();
+    this.hozAltKiadAzonositok = honapZarasaCol.getHozAltKiadAzonositok();
+    this.hozMddat = honapZarasaCol.getHozMddat().withZoneSameInstant(ZoneId.of("Europe/Budapest")).toLocalDateTime();
   }
 
   public String getId() {
@@ -40,11 +55,27 @@ public class HonapZarasa {
     this.hozZarasJel = pHozZarasJel;
   }
 
-  public ZonedDateTime getHozMddat() {
+  public boolean isHozAltKiadGeneralva() {
+    return this.hozAltKiadGeneralva;
+  }
+
+  public void setHozAltKiadGeneralva(final boolean pHozAltKiadGeneralva) {
+    this.hozAltKiadGeneralva = pHozAltKiadGeneralva;
+  }
+
+  public String getHozAltKiadAzonositok() {
+    return this.hozAltKiadAzonositok;
+  }
+
+  public void setHozAltKiadAzonositok(final String pHozAltKiadAzonositok) {
+    this.hozAltKiadAzonositok = pHozAltKiadAzonositok;
+  }
+
+  public LocalDateTime getHozMddat() {
     return this.hozMddat;
   }
 
-  public void setHozMddat(final ZonedDateTime pHozMddat) {
+  public void setHozMddat(final LocalDateTime pHozMddat) {
     this.hozMddat = pHozMddat;
   }
 }

@@ -3,6 +3,11 @@ package hu.comperd.befekt.dto;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import hu.comperd.befekt.collections.TranszferCol;
+import hu.comperd.befekt.etc.DomainCsoportok;
+import hu.comperd.befekt.repositories.DomainRepository;
+import hu.comperd.befekt.repositories.SzamlaRepository;
+import hu.comperd.befekt.util.Util;
 
 public class Transzfer {
   /** Azonosító. */
@@ -41,6 +46,29 @@ public class Transzfer {
 
   public Transzfer() {
     //
+  }
+
+  public Transzfer(final TranszferCol transzferCol) {
+    this.id = transzferCol.getId();
+    this.traAzon = Util.isEmpty(transzferCol.getTraAzon()) ? "" : transzferCol.getTraAzon();
+    this.traHonnan = transzferCol.getTraHonnan();
+    this.traHova = transzferCol.getTraHova();
+    this.traLeiras = transzferCol.getTraLeiras();
+    this.traDatum = transzferCol.getTraDatum();
+    this.traTerheles = transzferCol.getTraTerheles();
+    this.traArfolyam = transzferCol.getTraArfolyam();
+    this.traJovairas = transzferCol.getTraJovairas();
+    this.traJutalek = transzferCol.getTraJutalek();
+    this.traJutKonyv = transzferCol.getTraJutKonyv();
+    this.traSzamlaKonyv = transzferCol.isTraSzamlaKonyv();
+    this.traMddat = transzferCol.getTraMddat();
+  }
+
+  public Transzfer setDatas(final SzamlaRepository szaRepo, final DomainRepository domRepo) {
+    this.traHonnanNev = szaRepo.findBySzaKod(this.traHonnan).getSzaMegnev();
+    this.traHovaNev = szaRepo.findBySzaKod(this.traHova).getSzaMegnev();
+    this.traJutKonyvNev = domRepo.findByDomCsoportKodAndDomKod(DomainCsoportok.TRAJUTKON, this.traJutKonyv).getDomMegnev();
+    return this;
   }
 
   public String getId() {

@@ -13,4 +13,6 @@ public interface BefektFajtaRepository extends MongoRepository<BefektFajtaCol, S
   public BefektFajtaCol findByBffKod(String bffKod);
 
   public List<BefektFajtaCol> findByBffSzamla(String bffSzamla);
+
+  public List<BefektFajtaCol> findByBffJutSzla(String bffSzamla);
 }

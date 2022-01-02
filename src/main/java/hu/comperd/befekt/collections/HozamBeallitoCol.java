@@ -27,6 +27,8 @@ public class HozamBeallitoCol {
   private double        hobZaroJutalek;
   /** Nettó hozam. */
   private double        hobNettoHozam;
+  /** Adó könyvelés dátuma. */
+  private LocalDate     hobAdoDatum;
   /** Adó %-a. */
   private double        hobAdoSzaz;
   /** Adó mértéke. */
@@ -53,6 +55,7 @@ public class HozamBeallitoCol {
     this.hobNyitoJutalek = hozamBeallito.getHobNyitoJutalek();
     this.hobZaroJutalek = hozamBeallito.getHobZaroJutalek();
     this.hobNettoHozam = hozamBeallito.getHobNettoHozam();
+    this.hobAdoDatum = hozamBeallito.getHobAdoDatum();
     this.hobAdoSzaz = hozamBeallito.getHobAdoSzaz();
     this.hobAdo = hozamBeallito.getHobAdo();
     this.hobTartSzamla = hozamBeallito.getHobTartSzamla();
@@ -133,6 +136,14 @@ public class HozamBeallitoCol {
     this.hobNettoHozam = pHobNettoHozam;
   }
 
+  public LocalDate getHobAdoDatum() {
+    return this.hobAdoDatum;
+  }
+
+  public void setHobAdoDatum(final LocalDate pHobAdoDatum) {
+    this.hobAdoDatum = pHobAdoDatum;
+  }
+
   public double getHobAdoSzaz() {
     return this.hobAdoSzaz;
   }
@@ -193,6 +204,7 @@ public class HozamBeallitoCol {
         + ", hob_nyito_jutalek=" + this.hobNyitoJutalek
         + ", hob_zaro_jutalek=" + this.hobZaroJutalek
         + ", hob_netto_hozam=" + this.hobNettoHozam
+        + ", hob_ado_datum=" + this.hobAdoDatum
         + ", hob_ado_szaz=" + this.hobAdoSzaz
         + ", hob_ado=" + this.hobAdo
         + ", hob_tart_szamla=" + this.hobTartSzamla

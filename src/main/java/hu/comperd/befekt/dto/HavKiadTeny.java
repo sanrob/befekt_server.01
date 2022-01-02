@@ -1,12 +1,15 @@
 package hu.comperd.befekt.dto;
 
 import java.time.ZonedDateTime;
+import java.util.Map;
+import hu.comperd.befekt.collections.HavKiadTenyCol;
+import hu.comperd.befekt.collections.HavKiadTervCol;
+import hu.comperd.befekt.repositories.HavKiadTervRepository;
+import hu.comperd.befekt.repositories.SzamlaRepository;
 
 public class HavKiadTeny {
   /** Azonosító. */
   private String        id;
-  /** Azonosító. */
-  private String        hkmAzon;
   /** Időszak. */
   private String        hkmHonap;
   /** Sorszám. */
@@ -21,13 +24,57 @@ public class HavKiadTeny {
   private double        hkmTervOsszeg;
   /** Tényleges kiadás. */
   private double        hkmTenyOsszeg;
-  /** Könyvelve van-e. */
-  private boolean       hkmKonyvelve;
   /** Utolsó módosítás ideje. */
   private ZonedDateTime hkmMddat;
 
   public HavKiadTeny() {
     //
+  }
+
+  public HavKiadTeny(final HavKiadTenyCol havKiadTenyCol) {
+    this.id = havKiadTenyCol.getId();
+    this.hkmHonap = havKiadTenyCol.getHkmHonap();
+    this.hkmMegnev = havKiadTenyCol.getHkmMegnev();
+    this.hkmSzamla = havKiadTenyCol.getHkmSzamla();
+    this.hkmTervOsszeg = havKiadTenyCol.getHkmTervOsszeg();
+    this.hkmTenyOsszeg = havKiadTenyCol.getHkmTenyOsszeg();
+    this.hkmMddat = havKiadTenyCol.getHkmMddat();
+  }
+
+  public HavKiadTeny(final HavKiadTervCol havKiadTervCol) {
+    this.hkmMegnev = havKiadTervCol.getHktMegnev();
+    this.hkmSzamla = havKiadTervCol.getHktSzamla();
+    this.hkmTervOsszeg = havKiadTervCol.getHktOsszeg();
+    this.hkmTenyOsszeg = 0;
+  }
+
+  public HavKiadTeny(final Map.Entry<String, HavKiadTeny> tetel) {
+    this.hkmTervOsszeg = tetel.getValue().getHkmTervOsszeg();
+    this.hkmTenyOsszeg = tetel.getValue().getHkmTenyOsszeg();
+  }
+
+  public HavKiadTeny(final HavKiadTeny tetel) {
+    this.hkmTervOsszeg = tetel.getHkmTervOsszeg();
+    this.hkmTenyOsszeg = tetel.getHkmTenyOsszeg();
+  }
+
+  public HavKiadTeny setDatas(final HavKiadTervRepository haviTervRepo, final SzamlaRepository szlarepo, final String pHkmHonap) {
+    if (pHkmHonap != null) {
+      this.hkmHonap = pHkmHonap;
+    }
+    this.hkmSorszam = haviTervRepo.findByHktMegnev(this.hkmMegnev).getHktSorszam();
+    this.hkmSzamlaNev = szlarepo.findBySzaKod(this.hkmSzamla).getSzaMegnev();
+    return this;
+  }
+
+  public HavKiadTeny setDatas(final HavKiadTervRepository haviTervRepo, final SzamlaRepository szlarepo) {
+    return this.setDatas(haviTervRepo, szlarepo, null);
+  }
+
+  public HavKiadTeny setDatas() {
+    this.hkmSorszam = "000";
+    this.hkmMegnev = "Összesen";
+    return this;
   }
 
   public String getId() {
@@ -36,14 +83,6 @@ public class HavKiadTeny {
 
   public void setId(final String pId) {
     this.id = pId;
-  }
-
-  public String getHkmAzon() {
-    return this.hkmAzon;
-  }
-
-  public void setHkmAzon(final String pHkmAzon) {
-    this.hkmAzon = pHkmAzon;
   }
 
   public String getHkmHonap() {
@@ -100,14 +139,6 @@ public class HavKiadTeny {
 
   public void setHkmTenyOsszeg(final double pHkmTenyOsszeg) {
     this.hkmTenyOsszeg = pHkmTenyOsszeg;
-  }
-
-  public boolean isHkmKonyvelve() {
-    return this.hkmKonyvelve;
-  }
-
-  public void setHkmKonyvelve(final boolean pHkmKonyvelve) {
-    this.hkmKonyvelve = pHkmKonyvelve;
   }
 
   public ZonedDateTime getHkmMddat() {

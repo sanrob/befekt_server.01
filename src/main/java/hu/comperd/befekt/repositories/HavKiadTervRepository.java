@@ -10,5 +10,5 @@ public interface HavKiadTervRepository extends MongoRepository<HavKiadTervCol, S
 
   public HavKiadTervCol findByHktMegnev(String hktMegnev);
 
-  public List<HavKiadTervCol> findAllByhktSzamla(String hktSzamla);
+  public List<HavKiadTervCol> findAllByHktSzamla(String hktSzamla);
 }

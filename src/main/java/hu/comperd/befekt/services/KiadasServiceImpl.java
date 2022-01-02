@@ -15,6 +15,7 @@ import hu.comperd.befekt.dto.Kiadas;
 import hu.comperd.befekt.etc.DomainCsoportok;
 import hu.comperd.befekt.etc.DomainErtekek;
 import hu.comperd.befekt.etc.SzamlaKonyvTmp;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.repositories.DomainRepository;
@@ -63,16 +64,24 @@ public class KiadasServiceImpl {
   }
 
   public Object create(final Kiadas kiadas) {
+    if (alapAdatokService.isIdoszakLezart(kiadas.getKiaDatum())) {
+      return new KonyvelesiIdoszakLezartException(kiadas.getKiaDatum().toString().substring(0, 7),
+          "kiadás fölvitele");
+    }
     final KiadasCol kiadasCol = new KiadasCol(kiadas);
     final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_KIADAS, kiadas.getKiaDatum().getYear());
     kiadasCol.setKiaAzon(
         DomainErtekek.BIZTIP_KIADAS + kiadas.getKiaDatum().getYear() + Util.padl(Integer.toString(sorszam), 4, '0'));
-    this.repository.save(kiadasCol);
-    logger.info("Created Record: {}", kiadasCol);
-    return null;
+    final KiadasCol savedKiadas = this.repository.save(kiadasCol);
+    logger.info("Created Record: {}", savedKiadas);
+    return savedKiadas;
   }
 
   public Object update(final Kiadas kiadas) {
+    if (alapAdatokService.isIdoszakLezart(kiadas.getKiaDatum())) {
+      return new KonyvelesiIdoszakLezartException(kiadas.getKiaDatum().toString().substring(0, 7),
+          "kiadás módosítása");
+    }
     final Optional<KiadasCol> kiadasObj = this.repository.findById(kiadas.getId());
     if (kiadasObj.isPresent()) {
       final KiadasCol kiadasCol = kiadasObj.get();
@@ -112,24 +121,23 @@ public class KiadasServiceImpl {
     if (kiadasObj.isPresent()) {
       final KiadasCol kiadasCol = kiadasObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
-      if (kiadasCol.getKiaMddat().equals(pMddat)) {
-        final SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
-        szamlaKonyv.setSzfForgDat(kiadasCol.getKiaDatum());
-        szamlaKonyv.setSzfSzaAzon(kiadasCol.getKiaSzamla());
-        szamlaKonyv.setSzfSzoveg("Kiadás - " + kiadasCol.getKiaSzoveg());
-        szamlaKonyv.setSzfTipus(kiadasCol.getKiaTipus());
-        szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_KIADAS);
-        szamlaKonyv.setSzfHivBizAzon(kiadasCol.getKiaAzon());
-        szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_KOVETEL);
-        szamlaKonyv.setSzfOsszeg(kiadasCol.getKiaOsszeg());
-        this.szamlaKonyveles.konyveles(szamlaKonyv);
-        kiadasCol.setKiaSzlaKonyv(true);
-        kiadasCol.setKiaMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-        this.repository.save(kiadasCol);
-        logger.info("Számlakönyvelt Record: {}", kiadasCol);
-      } else {
+      if (!kiadasCol.getKiaMddat().equals(pMddat)) {
         return new MegvaltozottTartalomException("Kiadás", "számlakönyvelés");
       }
+      final SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
+      szamlaKonyv.setSzfForgDat(kiadasCol.getKiaDatum());
+      szamlaKonyv.setSzfSzaAzon(kiadasCol.getKiaSzamla());
+      szamlaKonyv.setSzfSzoveg("Kiadás - " + kiadasCol.getKiaSzoveg());
+      szamlaKonyv.setSzfTipus(kiadasCol.getKiaTipus());
+      szamlaKonyv.setSzfHivBizTip(DomainErtekek.BIZTIP_KIADAS);
+      szamlaKonyv.setSzfHivBizAzon(kiadasCol.getKiaAzon());
+      szamlaKonyv.setSzfTKJel(DomainErtekek.TKJEL_KOVETEL);
+      szamlaKonyv.setSzfOsszeg(kiadasCol.getKiaOsszeg());
+      this.szamlaKonyveles.konyveles(szamlaKonyv);
+      kiadasCol.setKiaSzlaKonyv(true);
+      kiadasCol.setKiaMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      this.repository.save(kiadasCol);
+      logger.info("Számlakönyvelt Record: {}", kiadasCol);
     }
     return null;
   }
@@ -139,30 +147,33 @@ public class KiadasServiceImpl {
     if (kiadasObj.isPresent()) {
       final KiadasCol kiadasCol = kiadasObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
-      if (kiadasCol.getKiaMddat().equals(pMddat)) {
-        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
-            DomainErtekek.BIZTIP_KIADAS, kiadasCol.getKiaAzon());
-        String parosAzon = null;
-        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-          if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
-            parosAzon = szlaForgTetel.getSzfAzon();
-          }
-        }
-        if (parosAzon == null) {
-          for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-            this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
-                szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
-            this.szlaForgRepo.delete(szlaForgTetel);
-          }
-          kiadasCol.setKiaSzlaKonyv(false);
-          kiadasCol.setKiaMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-          this.repository.save(kiadasCol);
-          logger.info("Számlakönyvelés törölve Record: {}", kiadasCol);
-        } else {
-          return new ParositottSzamlaforgalmiTetelException(parosAzon);
-        }
-      } else {
+      if (!kiadasCol.getKiaMddat().equals(pMddat)) {
         return new MegvaltozottTartalomException("Kiadás", "számlakönyvelés törlése");
+      }
+      if (this.alapAdatokService.isIdoszakLezart(kiadasCol.getKiaDatum())) {
+        return new KonyvelesiIdoszakLezartException(
+            kiadasCol.getKiaDatum().toString().substring(0, 7), "kiadás számlakönyvelésének törlése");
+      }
+      final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+          DomainErtekek.BIZTIP_KIADAS, kiadasCol.getKiaAzon());
+      String parosAzon = null;
+      for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+        if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
+          parosAzon = szlaForgTetel.getSzfAzon();
+        }
+      }
+      if (parosAzon == null) {
+        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+          this.szlaForgRepo.delete(szlaForgTetel);
+        }
+        kiadasCol.setKiaSzlaKonyv(false);
+        kiadasCol.setKiaMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+        this.repository.save(kiadasCol);
+        logger.info("Számlakönyvelés törölve Record: {}", kiadasCol);
+      } else {
+        return new ParositottSzamlaforgalmiTetelException(parosAzon);
       }
     }
     return null;

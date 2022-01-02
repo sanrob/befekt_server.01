@@ -7,11 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import hu.comperd.befekt.collections.BefektFajtaCol;
-import hu.comperd.befekt.collections.BevetelCol;
-import hu.comperd.befekt.collections.HavKiadTervCol;
-import hu.comperd.befekt.collections.KiadasCol;
-import hu.comperd.befekt.collections.TranszferCol;
+import hu.comperd.befekt.collections.*;
+import hu.comperd.befekt.util.Util;
 
 @ControllerAdvice
 public class ExceptionHandlers extends ResponseEntityExceptionHandler {
@@ -56,7 +53,19 @@ public class ExceptionHandlers extends ResponseEntityExceptionHandler {
     ResponseEntity<Object> ret = null;
     final List<String> details = new ArrayList<>();
     details.add(ex.getLocalizedMessage());
-    if (ex.getAnyObject() instanceof TranszferCol) {
+    if (ex.getAnyObject() instanceof BefektFajtaCol) {
+      ret = new ResponseEntity<>(
+          "Ez a számla szerepel a Befektetés egyedek állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+    } else if (ex.getAnyObject() instanceof BefektZarasCol) {
+      ret = new ResponseEntity<>(
+          "Ez a számla szerepel a Befektetések zárása állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+    } else if (ex.getAnyObject() instanceof BefektetesCol) {
+      ret = new ResponseEntity<>(
+          "Ez a számla szerepel a Befektetések nyitása állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+    } else if (ex.getAnyObject() instanceof BevetelCol) {
+      ret = new ResponseEntity<>(
+          "Ez a számla szerepel a BEVÉTEL állományban: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+    } else if (ex.getAnyObject() instanceof TranszferCol) {
       ret = new ResponseEntity<>(
           "Ez a számla szerepel a Transzferek állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
     } else if (ex.getAnyObject() instanceof HavKiadTervCol) {
@@ -65,12 +74,15 @@ public class ExceptionHandlers extends ResponseEntityExceptionHandler {
     } else if (ex.getAnyObject() instanceof KiadasCol) {
       ret = new ResponseEntity<>(
           "Ez a számla szerepel a KIADÁS állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
-    } else if (ex.getAnyObject() instanceof BefektFajtaCol) {
+    } else if (ex.getAnyObject() instanceof HataridosElszamolasCol) {
       ret = new ResponseEntity<>(
-          "Ez a számla szerepel a Befektetés egyedek állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
-    } else if (ex.getAnyObject() instanceof BevetelCol) {
+          "Ez a számla szerepel a Határidős Elszámolások állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+    } else if (ex.getAnyObject() instanceof HozamBeallitoCol) {
       ret = new ResponseEntity<>(
-          "Ez a számla szerepel a BEVÉTEL állományban: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+          "Ez a számla szerepel a Hozam Beállítások állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
+    } else if (ex.getAnyObject() instanceof OsztalekCol) {
+      ret = new ResponseEntity<>(
+          "Ez a számla szerepel az Osztalékok állományában: " + ex.getAnyCode(), HttpStatus.ALREADY_REPORTED);
     }
     return ret;
   }
@@ -113,5 +125,59 @@ public class ExceptionHandlers extends ResponseEntityExceptionHandler {
     return new ResponseEntity<>(
         "A " + ex.getSzlaForgAzon() + " számlaforgalmi tétel már párosítva lett, így a törlés nem végrehajtható!",
         HttpStatus.ALREADY_REPORTED);
+  }
+
+  @ExceptionHandler(KonyvelesiIdoszakLezartException.class)
+  public ResponseEntity<Object> handleKonyvelesiIdoszakLezartException(final KonyvelesiIdoszakLezartException ex) {
+    final List<String> details = new ArrayList<>();
+    details.add(ex.getLocalizedMessage());
+    return new ResponseEntity<>(ex.getMessage() + ", így a(z) " + ex.getSzoveg() + " funkció nem végrehajtható!",
+        HttpStatus.ALREADY_REPORTED);
+  }
+
+  @ExceptionHandler(HonapNemLezarhatoException.class)
+  public ResponseEntity<Object> handleHonapNemLezarhatoException(final HonapNemLezarhatoException ex) {
+    final List<String> details = new ArrayList<>();
+    details.add(ex.getLocalizedMessage());
+    return new ResponseEntity<>(ex.isZarase()
+        ? "Az előző záráshoz képest csak a rákövetkező hónap zárható le!"
+        : "Csak az utoljára lezárt hónap nyitható fel!",
+        HttpStatus.ALREADY_REPORTED);
+  }
+
+  @ExceptionHandler(VanKonyveletlenTetelException.class)
+  public ResponseEntity<Object> handleVanKonyveletlenTetelException(final VanKonyveletlenTetelException ex) {
+    final List<String> details = new ArrayList<>();
+    details.add(ex.getLocalizedMessage());
+    return new ResponseEntity<>("Az adott hónapban van könyveletlen " + ex.getTranzakcio() + ", így nem lezárható!",
+        HttpStatus.ALREADY_REPORTED);
+  }
+
+  @ExceptionHandler(VanKonyveltGeneraltKiadasException.class)
+  public ResponseEntity<Object> handleVanKonyveltGeneraltKiadasException(final VanKonyveltGeneraltKiadasException ex) {
+    final List<String> details = new ArrayList<>();
+    details.add(ex.getLocalizedMessage());
+    return new ResponseEntity<>(ex.getHonap() + " hónap generált tételei között van lekönyvelt, így a törlés nem megengedett",
+        HttpStatus.ALREADY_REPORTED);
+  }
+
+  @ExceptionHandler(HavKiadTervCannotDeleteException.class)
+  public ResponseEntity<Object> handleHavKiadTervCannotDeleteException(final HavKiadTervCannotDeleteException ex) {
+    final List<String> details = new ArrayList<>();
+    details.add(ex.getLocalizedMessage());
+    return new ResponseEntity<>("'" + ex.getHktMegnev() + "' tervezetre már van tényadat könyvelve, így nem törölhető!",
+        HttpStatus.ALREADY_REPORTED);
+  }
+
+  @ExceptionHandler(HavKiadTervCannotModifyException.class)
+  public ResponseEntity<Object> handleHavKiadTervCannotModifyException(final HavKiadTervCannotModifyException ex) {
+    final List<String> details = new ArrayList<>();
+    details.add(ex.getLocalizedMessage());
+    if (Util.isEmpty(ex.getHktDatumIg())) {
+      return new ResponseEntity<>("Az érvényesség kezdete nem lehet nagyobb, mint a legkisebb hónap, amire már könyveltek: '"
+          + ex.getHktDatumTol() + "'", HttpStatus.ALREADY_REPORTED);
+    }
+    return new ResponseEntity<>("Az érvényesség vége nem lehet kisebb, mint a legnagyobb hónap, amire már könyveltek: '"
+        + ex.getHktDatumIg() + "'", HttpStatus.ALREADY_REPORTED);
   }
 }

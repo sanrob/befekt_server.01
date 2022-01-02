@@ -26,16 +26,9 @@ public class BefektEgyenlegCustomRepoImpl implements BefektEgyenlegCustomRepo {
   @Override
   public List<BefektetesCol> findAllTetelNyitottAdottNapon(final LocalDate pLekDatum) {
     final List<AggregationOperation> list = new ArrayList<>();
-    final Criteria konyvDatumElotti = Criteria.where("befKonyvDat").lte(pLekDatum);
-    final Criteria konyvDatumUres = Criteria.where("befKonyvDat").is(null);
-    final Criteria bevDatumElotti = Criteria.where("befDatum").lte(pLekDatum);
-    //    final Criteria befDatumSzerintJo = new Criteria().andOperator(konyvDatumUres, bevDatumElotti);
-    final Criteria befDatumSzerintJo = bevDatumElotti;
-    //    final Criteria datumElottKeletkezett = new Criteria().orOperator(konyvDatumElotti, befDatumSzerintJo);
-    final Criteria datumElottKeletkezett = befDatumSzerintJo;
-    final Criteria nincsLezarva = Criteria.where("befLezDat").is(null);
-    final Criteria lezarasDatumUtani = Criteria.where("befLezDat").gt(pLekDatum);
-    final Criteria datumUtaniLezaras = new Criteria().orOperator(nincsLezarva, lezarasDatumUtani);
+    final Criteria datumElottKeletkezett = Criteria.where("befDatum").lte(pLekDatum);
+    final Criteria datumUtaniLezaras = new Criteria().orOperator(
+        Criteria.where("befLezDat").is(null), Criteria.where("befLezDat").gt(pLekDatum));
     final Criteria erintettBefektetesek = new Criteria().andOperator(datumElottKeletkezett, datumUtaniLezaras);
     list.add(Aggregation.match(erintettBefektetesek));
     list.add(Aggregation.sort(Sort.Direction.ASC, "befBffKod"));

@@ -13,4 +13,6 @@ public interface TranszferRepository extends MongoRepository<TranszferCol, Strin
   public List<TranszferCol> findAllByTraHonnan(String traHonnan);
 
   public List<TranszferCol> findAllByTraHova(String traHova);
+
+  public List<TranszferCol> findAllByTraEvAndTraSzamlaKonyv(final int traEv, final boolean traSzamlaKonyv);
 }

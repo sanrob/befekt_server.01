@@ -7,12 +7,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import hu.comperd.befekt.dto.Befektetes;
 import hu.comperd.befekt.dto.HataridosElszamolas;
+import hu.comperd.befekt.dto.Kamat;
 import hu.comperd.befekt.dto.Osztalek;
 import hu.comperd.befekt.etc.Response;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.services.BefektetesServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Befektetések nyitása")
 @RequestMapping(value = "/befektetesek")
 public class BefektetesServiceController extends BaseController {
   @Autowired
@@ -26,7 +30,11 @@ public class BefektetesServiceController extends BaseController {
 
   @PostMapping(value = "")
   public ResponseEntity<Object> createBefektetes(@RequestBody final Befektetes befektetes) {
-    this.processRequest(o -> befektetesService.create(befektetes));
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> this.befektetesService.create(befektetes));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    }
     return new ResponseEntity<>("Befektetes is created successfully", HttpStatus.CREATED);
   }
 
@@ -34,7 +42,9 @@ public class BefektetesServiceController extends BaseController {
   public ResponseEntity<Object> updateBefektetes(@RequestBody final Befektetes befektetes) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.update(befektetes));
     final Object retData = retObj.getBody().getData();
-    if (retData instanceof MegvaltozottTartalomException) {
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    } else if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
     }
     return new ResponseEntity<>("Befektetes is updated successfully", HttpStatus.OK);
@@ -67,17 +77,19 @@ public class BefektetesServiceController extends BaseController {
                                                           @PathVariable("mddat") final String mddat) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.szamlaForgTorl(id, mddat));
     final Object retData = retObj.getBody().getData();
-    if (retData instanceof MegvaltozottTartalomException) {
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    } else if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
     }
     return new ResponseEntity<>("Befektetés tétel számlakönyvelése törlése sikeres!", HttpStatus.OK);
   }
 
-  @GetMapping(value = "/osztalekbeallito/{befektId}")
-  public Osztalek findHozamBeallito(@PathVariable("befektId") final String befektId) {
-    final ResponseEntity<Response<Osztalek>> osztalekBeallito = this.processRequest(
-        o -> this.befektetesService.findOsztalekBeallito(befektId));
-    return osztalekBeallito.getBody().getData();
+  @GetMapping(value = "/osztalekok/{befektId}")
+  public List<Osztalek> findAllOsztalek(@PathVariable("befektId") final String befektId) {
+    final ResponseEntity<Response<List<Osztalek>>> osztalekok = this.processRequest(
+        o -> this.befektetesService.findAllOsztalek(befektId));
+    return osztalekok.getBody().getData();
   }
 
   @PutMapping(value = "/saveosztalek")
@@ -88,6 +100,17 @@ public class BefektetesServiceController extends BaseController {
       throw (MegvaltozottTartalomException)retData;
     }
     return new ResponseEntity<>("Osztalek is saved successfully", HttpStatus.OK);
+  }
+
+  @DeleteMapping(value = "/deleteOsztalek/{id}/{mddat}")
+  public ResponseEntity<Object> deleteOsztalek(@PathVariable("id") final String id,
+                                               @PathVariable("mddat") final String mddat) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.osztalekTorles(id, mddat));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Osztalék is deleted successfully", HttpStatus.OK);
   }
 
   @PutMapping(value = "/osztalekszlakonyveles/{id}/{mddat}")
@@ -161,4 +184,55 @@ public class BefektetesServiceController extends BaseController {
     }
     return new ResponseEntity<>("Határidős elszámolás számlakönyvelésének törlése sikeres!", HttpStatus.OK);
   }
+
+  @GetMapping(value = "/kamatok/{befektId}")
+  public List<Kamat> findAllKamtok(@PathVariable("befektId") final String befektId) {
+    final ResponseEntity<Response<List<Kamat>>> kamatok = this.processRequest(
+        o -> this.befektetesService.findAllKamat(befektId));
+    return kamatok.getBody().getData();
+  }
+  /*
+  @PutMapping(value = "/saveosztalek")
+  public ResponseEntity<Object> osztalekTarolas(@RequestBody final Osztalek osztalek) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.osztalekTarolas(osztalek));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Osztalek is saved successfully", HttpStatus.OK);
+  }
+  
+  @DeleteMapping(value = "/deleteOsztalek/{id}/{mddat}")
+  public ResponseEntity<Object> deleteOsztalek(@PathVariable("id") final String id,
+                                               @PathVariable("mddat") final String mddat) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.osztalekTorles(id, mddat));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Osztalék is deleted successfully", HttpStatus.OK);
+  }
+  
+  @PutMapping(value = "/osztalekszlakonyveles/{id}/{mddat}")
+  public ResponseEntity<Object> szlakonyvOsztalek(@PathVariable("id") final String id,
+                                                  @PathVariable("mddat") final String mddat) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.osztalekSzamlaForgGen(id, mddat));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Osztalék tétel számlakönyvelése sikeres!", HttpStatus.OK);
+  }
+  
+  @PutMapping(value = "/osztalekszlakonytorles/{id}/{mddat}")
+  public ResponseEntity<Object> szlakonyvTorlesOsztalek(@PathVariable("id") final String id,
+                                                        @PathVariable("mddat") final String mddat) {
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektetesService.osztalekSzamlaForgTorl(id, mddat));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof MegvaltozottTartalomException) {
+      throw (MegvaltozottTartalomException)retData;
+    }
+    return new ResponseEntity<>("Osztalek számlakönyvelése törlése sikeres!", HttpStatus.OK);
+  }
+  */
 }

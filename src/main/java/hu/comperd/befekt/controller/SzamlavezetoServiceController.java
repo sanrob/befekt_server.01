@@ -11,8 +11,10 @@ import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.exceptions.SzamlavezetoAlreadyExitException;
 import hu.comperd.befekt.exceptions.SzamlavezetoCannotDeleteException;
 import hu.comperd.befekt.services.SzamlavezetoServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Számlavezetők")
 @RequestMapping(value = "/szamlavezetok")
 public class SzamlavezetoServiceController extends BaseController {
   @Autowired

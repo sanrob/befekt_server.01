@@ -18,7 +18,9 @@ import hu.comperd.befekt.dto.HozamBeallito;
 import hu.comperd.befekt.dto.NyitasZarasParok;
 import hu.comperd.befekt.etc.DomainErtekek;
 import hu.comperd.befekt.etc.SzamlaKonyvTmp;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
+import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.repositories.*;
 import hu.comperd.befekt.util.Util;
 
@@ -77,6 +79,10 @@ public class BefektZarasServiceImpl {
   }
 
   public Object create(final BefektZaras befektZaras) {
+    if (alapAdatokService.isIdoszakLezart(befektZaras.getBezKonyvDat())) {
+      return new KonyvelesiIdoszakLezartException(befektZaras.getBezKonyvDat().toString().substring(0, 7),
+          "pozíció zárás fölvitele");
+    }
     final BefektZarasCol befektZarasCol = new BefektZarasCol(befektZaras);
     final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_ZARAS, befektZaras.getBezDatum().getYear());
     befektZarasCol.setBezAzon(
@@ -87,6 +93,10 @@ public class BefektZarasServiceImpl {
   }
 
   public Object update(final BefektZaras befektZaras) {
+    if (alapAdatokService.isIdoszakLezart(befektZaras.getBezKonyvDat())) {
+      return new KonyvelesiIdoszakLezartException(befektZaras.getBezKonyvDat().toString().substring(0, 7),
+          "pozíció zárás módosítása");
+    }
     final Optional<BefektZarasCol> befektZarasObj = this.repository.findById(befektZaras.getId());
     if (befektZarasObj.isPresent()) {
       final BefektZarasCol befektZarasCol = befektZarasObj.get();
@@ -175,21 +185,24 @@ public class BefektZarasServiceImpl {
     if (befektZarasObj.isPresent()) {
       final BefektZarasCol befektZarasCol = befektZarasObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
-      if (befektZarasCol.getBezMddat().equals(pMddat)) {
-        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
-            DomainErtekek.BIZTIP_ZARAS, befektZarasCol.getBezAzon());
-        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
-              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
-          this.szlaForgRepo.delete(szlaForgTetel);
-        }
-        befektZarasCol.setBezKonyvelve(false);
-        befektZarasCol.setBezMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-        this.repository.save(befektZarasCol);
-        logger.info("Számlakönyvelés törölve Record: {}", befektZarasCol);
-      } else {
+      if (!befektZarasCol.getBezMddat().equals(pMddat)) {
         return new MegvaltozottTartalomException("Befektetés zárás", "számlakönyvelés törlése");
       }
+      if (this.alapAdatokService.isIdoszakLezart(befektZarasCol.getBezKonyvDat())) {
+        return new KonyvelesiIdoszakLezartException(
+            befektZarasCol.getBezKonyvDat().toString().substring(0, 7), "befektetés zárás számlakönyvelésének törlése");
+      }
+      final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+          DomainErtekek.BIZTIP_ZARAS, befektZarasCol.getBezAzon());
+      for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+        this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+            szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+        this.szlaForgRepo.delete(szlaForgTetel);
+      }
+      befektZarasCol.setBezKonyvelve(false);
+      befektZarasCol.setBezMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+      this.repository.save(befektZarasCol);
+      logger.info("Számlakönyvelés törölve Record: {}", befektZarasCol);
     }
     return null;
   }
@@ -275,8 +288,11 @@ public class BefektZarasServiceImpl {
         final BefektZarasCol befektZarasCol = this.repository.findByBezAzon(nyitasZarasParokCol.getParZarAzon());
         hozamBeallito = new HozamBeallito();
         hozamBeallito.setHobParositasId(nyitasZarasParokCol.getId());
-        final double bruttoHozam = Math.round(
-            nyitasZarasParokCol.getParDarab() * (befektZarasCol.getBezArfolyam() - befektetesCol.getBefArfolyam()));
+        final double nettoNyitoErtek = (nyitasZarasParokCol.getParDarab() / befektetesCol.getBefDarab())
+            * befektetesCol.getBefErtek();
+        final double nettoZaroErtek = (nyitasZarasParokCol.getParDarab() / befektZarasCol.getBezDarab())
+            * befektZarasCol.getBezErtek();
+        final double bruttoHozam = Math.round(nettoZaroErtek - nettoNyitoErtek);
         hozamBeallito.setHobBruttoHozam(bruttoHozam);
         final double nyitasiJutalek = Math.round(
             (nyitasZarasParokCol.getParDarab() / befektetesCol.getBefDarab()) * befektetesCol.getBefJutErtek());
@@ -293,6 +309,7 @@ public class BefektZarasServiceImpl {
             ? befektZarasCol.getBezDatum()
             : befektZarasCol.getBezKonyvDat();
         hozamBeallito.setHobZarDatum(hobZarDatum);
+        hozamBeallito.setHobAdoDatum(hobZarDatum);
       }
     } else {
       hozamBeallito = new HozamBeallito();
@@ -304,6 +321,7 @@ public class BefektZarasServiceImpl {
       hozamBeallito.setHobNyitoJutalek(hozamBeallitoCol.getHobNyitoJutalek());
       hozamBeallito.setHobZaroJutalek(hozamBeallitoCol.getHobZaroJutalek());
       hozamBeallito.setHobNettoHozam(hozamBeallitoCol.getHobNettoHozam());
+      hozamBeallito.setHobAdoDatum(hozamBeallitoCol.getHobAdoDatum());
       hozamBeallito.setHobAdoSzaz(hozamBeallitoCol.getHobAdoSzaz());
       hozamBeallito.setHobAdo(hozamBeallitoCol.getHobAdo());
       hozamBeallito.setHobTartSzamla(hozamBeallitoCol.getHobTartSzamla());
@@ -346,7 +364,7 @@ public class BefektZarasServiceImpl {
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
       if (hozamBeallitoCol.getHobMddat().equals(pMddat)) {
         SzamlaKonyvTmp szamlaKonyv = new SzamlaKonyvTmp();
-        szamlaKonyv.setSzfForgDat(hozamBeallitoCol.getHobZarDatum());
+        szamlaKonyv.setSzfForgDat(hozamBeallitoCol.getHobAdoDatum());
         szamlaKonyv.setSzfSzaAzon(hozamBeallitoCol.getHobKovSzamla());
         szamlaKonyv.setSzfSzoveg("Hozam");
         szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_HO);
@@ -356,7 +374,7 @@ public class BefektZarasServiceImpl {
         szamlaKonyv.setSzfOsszeg(Math.abs(hozamBeallitoCol.getHobAdo()));
         this.szamlaKonyveles.konyveles(szamlaKonyv);
         szamlaKonyv = new SzamlaKonyvTmp();
-        szamlaKonyv.setSzfForgDat(hozamBeallitoCol.getHobZarDatum());
+        szamlaKonyv.setSzfForgDat(hozamBeallitoCol.getHobAdoDatum());
         szamlaKonyv.setSzfSzaAzon(hozamBeallitoCol.getHobTartSzamla());
         szamlaKonyv.setSzfSzoveg("Hozam");
         szamlaKonyv.setSzfTipus(DomainErtekek.SZLAFORGTIP_HO);
@@ -384,15 +402,25 @@ public class BefektZarasServiceImpl {
       if (hozamBeallitoCol.getHobMddat().equals(pMddat)) {
         final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
             DomainErtekek.BIZTIP_HOZAM, hozamBeallitoCol.getHobAzon());
+        String parosAzon = null;
         for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
-              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
-          this.szlaForgRepo.delete(szlaForgTetel);
+          if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
+            parosAzon = szlaForgTetel.getSzfAzon();
+          }
         }
-        hozamBeallitoCol.setHobKonyvelve(false);
-        hozamBeallitoCol.setHobMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-        this.hozamBeallRepo.save(hozamBeallitoCol);
-        logger.info("Számlakönyvelés törölve Record: {}", hozamBeallitoCol);
+        if (parosAzon == null) {
+          for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+            this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+                szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+            this.szlaForgRepo.delete(szlaForgTetel);
+          }
+          hozamBeallitoCol.setHobKonyvelve(false);
+          hozamBeallitoCol.setHobMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+          this.hozamBeallRepo.save(hozamBeallitoCol);
+          logger.info("Számlakönyvelés törölve Record: {}", hozamBeallitoCol);
+        } else {
+          return new ParositottSzamlaforgalmiTetelException(parosAzon);
+        }
       } else {
         return new MegvaltozottTartalomException("Hozam beállítás", "számlakönyvelés törlése");
       }

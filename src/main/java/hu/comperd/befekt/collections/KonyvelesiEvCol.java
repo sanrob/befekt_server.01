@@ -25,6 +25,11 @@ public class KonyvelesiEvCol {
     this.konMddat = ZonedDateTime.now(ZoneId.systemDefault());
   }
 
+  public KonyvelesiEvCol(final String pEv) {
+    this.konEv = pEv;
+    this.konMddat = ZonedDateTime.now(ZoneId.systemDefault());
+  }
+
   public String getId() {
     return this.id;
   }

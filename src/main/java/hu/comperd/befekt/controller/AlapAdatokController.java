@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import hu.comperd.befekt.dto.Domain;
 import hu.comperd.befekt.dto.KonyvelesiEv;
+import hu.comperd.befekt.dto.SystemParams;
 import hu.comperd.befekt.etc.Response;
 import hu.comperd.befekt.services.AlapAdatokServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Alapadatok")
 @RequestMapping(value = "/alapadatok")
 public class AlapAdatokController extends BaseController {
   @Autowired
@@ -28,6 +31,12 @@ public class AlapAdatokController extends BaseController {
   public List<Domain> findAllDomainByCsoport(@PathVariable("csoportKod") final String csoportKod) {
     final ResponseEntity<Response<List<Domain>>> domains = this.processRequest(
         o -> alapAdatokService.findAllDomainByCsoport(csoportKod));
+    return domains.getBody().getData();
+  }
+
+  @GetMapping(value = "/systemparams")
+  public SystemParams findSystemParams() {
+    final ResponseEntity<Response<SystemParams>> domains = this.processRequest(o -> alapAdatokService.findSystemParams());
     return domains.getBody().getData();
   }
 }

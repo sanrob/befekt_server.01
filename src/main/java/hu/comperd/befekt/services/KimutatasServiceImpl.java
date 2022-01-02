@@ -37,9 +37,11 @@ public class KimutatasServiceImpl {
   private NyitasZarasParokRepository   parokRepo;
   @Autowired
   private BefektZarasRepository        befZarasRepo;
+  @Autowired
+  private DevizaArfolyamCustomRepo     devArfCustomRepo;
 
-  public List<SzamlaEgyenleg> getSzamlakHaviEgyenleg(final String honap) {
-    final LocalDate honapVege = this.getHonapUtolsoNapja(honap);
+  public List<SzamlaEgyenleg> getSzamlakHaviEgyenleg(final String pHonap) {
+    final LocalDate honapVege = this.getHonapUtolsoNapja(pHonap);
     final Collection<SzamlaOsszesenCol> osszesenTetelek = this.findBySzakodAndNotAfterForgDat(honapVege);
     final List<SzamlaEgyenleg> haviEgyenlegek = new ArrayList<>();
     for (final SzamlaOsszesenCol osszesenTetel : osszesenTetelek) {
@@ -59,6 +61,13 @@ public class KimutatasServiceImpl {
       haviEgyenleg.setSzeSzaDevizaNev(this.devrepo.findByDevKod(szamla.getSzaDeviza()).getDevMegnev());
       haviEgyenleg.setSzeEgyenleg(osszesenTetel.getSzoZaro());
       haviEgyenleg.setSzeArfolyam(1);
+      if (DomainErtekek.ALAP_DEVIZA.equals(szamla.getSzaDeviza())) {
+        haviEgyenleg.setSzeArfolyam(1);
+      } else {
+        final DevizaArfolyamCol devizaArfolyamCol = this.devArfCustomRepo.findMirolDevKodAndMireDevKodNapiArfolyam(
+            szamla.getSzaDeviza(), DomainErtekek.ALAP_DEVIZA, honapVege);
+        haviEgyenleg.setSzeArfolyam(devizaArfolyamCol == null ? 0 : devizaArfolyamCol.getDeaArfolyam());
+      }
       haviEgyenleg.setSzeArfolyamErtek(haviEgyenleg.getSzeEgyenleg() * haviEgyenleg.getSzeArfolyam());
       haviEgyenlegek.add(haviEgyenleg);
     }
@@ -121,8 +130,12 @@ public class KimutatasServiceImpl {
         nyitottBefektetes.setBeeBffKodNev(befektFajta.getBffMegnev());
         final BefektetesArfolyamCol befektetesArfolyam = this.befArfCustomRepo.findBefKodNapiArfolyam(
             erintettTetel.getBefBffKod(), lekNap);
-        final double arfolyam = befektetesArfolyam == null ? 0 : befektetesArfolyam.getBeaArfolyam();
-        final LocalDate arfDatum = befektetesArfolyam == null ? null : befektetesArfolyam.getBeaArfDatum();
+        final double arfolyam = "V".equals(befektFajta.getBffNyitElsz())
+            ? erintettTetel.getBefArfolyam()
+            : (befektetesArfolyam == null ? 0 : befektetesArfolyam.getBeaArfolyam());
+        final LocalDate arfDatum = "V".equals(befektFajta.getBffNyitElsz())
+            ? erintettTetel.getBefDatum()
+            : (befektetesArfolyam == null ? null : befektetesArfolyam.getBeaArfDatum());
         nyitottBefektetes.setBeeArfDatum(arfDatum);
         nyitottBefektetes.setBeeArfolyam(arfolyam);
         final SzamlaCol szamla = this.szlaRepo.findBySzaKod(befektFajta.getBffSzamla());
@@ -132,7 +145,9 @@ public class KimutatasServiceImpl {
         if (DomainErtekek.ALAP_DEVIZA.equals(szamla.getSzaDeviza())) {
           nyitottBefektetes.setBeeDevArfo(1);
         } else {
-          //
+          final DevizaArfolyamCol devizaArfolyamCol = this.devArfCustomRepo.findMirolDevKodAndMireDevKodNapiArfolyam(
+              szamla.getSzaDeviza(), DomainErtekek.ALAP_DEVIZA, lekNap);
+          nyitottBefektetes.setBeeDevArfo(devizaArfolyamCol == null ? 0 : devizaArfolyamCol.getDeaArfolyam());
         }
         nyitottBefektetesek.put(erintettTetel.getBefBffKod(), nyitottBefektetes);
       }

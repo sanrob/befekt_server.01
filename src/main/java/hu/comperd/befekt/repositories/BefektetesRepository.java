@@ -11,4 +11,10 @@ public interface BefektetesRepository extends MongoRepository<BefektetesCol, Str
   public List<BefektetesCol> findAllByBefEvOrderByBefDatumDesc(int befEv);
 
   public List<BefektetesCol> findByBefBffKod(String bffKod);
+
+  public List<BefektetesCol> findAllByBefElszSzla(String szaKod);
+
+  public List<BefektetesCol> findAllByBefJutSzla(String szaKod);
+
+  public List<BefektetesCol> findAllByBefEvAndBefKonyvelve(final int befEv, final boolean befKonyvelve);
 }

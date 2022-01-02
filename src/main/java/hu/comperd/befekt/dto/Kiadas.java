@@ -3,6 +3,7 @@ package hu.comperd.befekt.dto;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import hu.comperd.befekt.util.Util;
 
 public class Kiadas {
   /** Azonosító. */
@@ -31,6 +32,20 @@ public class Kiadas {
 
   public Kiadas() {
     //
+  }
+
+  public Kiadas(final AltKiadSzamlankent altKiad) {
+    this.kiaSzoveg = "Általános kiadás:";
+    this.kiaOsszeg = altKiad.getAksTenyOsszeg();
+    this.kiaSzamla = altKiad.getAksSzaKod();
+    this.kiaSzlaKonyv = false;
+  }
+
+  public Kiadas setDatas(final String honap, final SystemParams sysParam) {
+    this.kiaDatum = Util.getLastDayOfMonth(honap);
+    this.kiaSzoveg += " " + honap.substring(0, 4) + "." + honap.substring(5, 7) + "/" + this.kiaSzamla + "/";
+    this.kiaTipus = sysParam.getAltKiadTipusKod();
+    return this;
   }
 
   public String getId() {

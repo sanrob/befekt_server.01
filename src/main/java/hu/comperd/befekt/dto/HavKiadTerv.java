@@ -1,8 +1,9 @@
 package hu.comperd.befekt.dto;
 
-import java.time.LocalDate;
 import java.time.ZonedDateTime;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import java.util.Map;
+import hu.comperd.befekt.collections.HavKiadTervCol;
+import hu.comperd.befekt.repositories.SzamlaRepository;
 
 public class HavKiadTerv {
   /** Azonosító. */
@@ -18,16 +19,40 @@ public class HavKiadTerv {
   /** Tervezett összeg. */
   private double        hktOsszeg;
   /** Tervezet érvényesség kezdete. */
-  @JsonFormat(pattern = "yyyy-MM-dd")
-  private LocalDate     hktDatumTol;
+  private String        hktDatumTol;
   /** Tervezet érvényesség vége. */
-  @JsonFormat(pattern = "yyyy-MM-dd")
-  private LocalDate     hktDatumIg;
+  private String        hktDatumIg;
   /** Utolsó módosítás ideje. */
   private ZonedDateTime hktMddat;
 
   public HavKiadTerv() {
     //
+  }
+
+  public HavKiadTerv(final HavKiadTervCol havKiadTervCol) {
+    this.id = havKiadTervCol.getId();
+    this.hktSorszam = havKiadTervCol.getHktSorszam();
+    this.hktMegnev = havKiadTervCol.getHktMegnev();
+    this.hktSzamla = havKiadTervCol.getHktSzamla();
+    this.hktOsszeg = havKiadTervCol.getHktOsszeg();
+    this.hktDatumTol = havKiadTervCol.getHktDatumTol();
+    this.hktDatumIg = havKiadTervCol.getHktDatumIg();
+    this.hktMddat = havKiadTervCol.getHktMddat();
+  }
+
+  public HavKiadTerv(final Map.Entry<String, Double> tetel) {
+    this.hktOsszeg = tetel.getValue();
+  }
+
+  public HavKiadTerv setDatas(final SzamlaRepository szlarepo) {
+    this.hktSzamlaNev = szlarepo.findBySzaKod(this.hktSzamla).getSzaMegnev();
+    return this;
+  }
+
+  public HavKiadTerv setDatasOsszesen() {
+    this.hktSorszam = "000";
+    this.hktMegnev = "Összesen";
+    return this;
   }
 
   public String getId() {
@@ -78,19 +103,19 @@ public class HavKiadTerv {
     this.hktOsszeg = pHktOsszeg;
   }
 
-  public LocalDate getHktDatumTol() {
+  public String getHktDatumTol() {
     return this.hktDatumTol;
   }
 
-  public void setHktDatumTol(final LocalDate pHktDatumTol) {
+  public void setHktDatumTol(final String pHktDatumTol) {
     this.hktDatumTol = pHktDatumTol;
   }
 
-  public LocalDate getHktDatumIg() {
+  public String getHktDatumIg() {
     return this.hktDatumIg;
   }
 
-  public void setHktDatumIg(final LocalDate pHktDatumIg) {
+  public void setHktDatumIg(final String pHktDatumIg) {
     this.hktDatumIg = pHktDatumIg;
   }
 

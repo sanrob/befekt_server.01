@@ -1,11 +1,9 @@
 package hu.comperd.befekt.collections;
 
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import hu.comperd.befekt.dto.HavKiadTerv;
 
 @Document(collection = "havi_kiadas_tervezet")
@@ -22,11 +20,9 @@ public class HavKiadTervCol {
   /** Tervezett összeg. */
   private double        hktOsszeg;
   /** Tervezet érvényesség kezdete. */
-  @JsonFormat(pattern = "yyyy-MM-dd")
-  private LocalDate     hktDatumTol;
+  private String        hktDatumTol;
   /** Tervezet érvényesség vége. */
-  @JsonFormat(pattern = "yyyy-MM-dd")
-  private LocalDate     hktDatumIg;
+  private String        hktDatumIg;
   /** Utolsó módosítás ideje. */
   private ZonedDateTime hktMddat;
 
@@ -84,19 +80,19 @@ public class HavKiadTervCol {
     this.hktOsszeg = pHktOsszeg;
   }
 
-  public LocalDate getHktDatumTol() {
+  public String getHktDatumTol() {
     return this.hktDatumTol;
   }
 
-  public void setHktDatumTol(final LocalDate pHktDatumTol) {
+  public void setHktDatumTol(final String pHktDatumTol) {
     this.hktDatumTol = pHktDatumTol;
   }
 
-  public LocalDate getHktDatumIg() {
+  public String getHktDatumIg() {
     return this.hktDatumIg;
   }
 
-  public void setHktDatumIg(final LocalDate pHktDatumIg) {
+  public void setHktDatumIg(final String pHktDatumIg) {
     this.hktDatumIg = pHktDatumIg;
   }
 

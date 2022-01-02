@@ -7,11 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import hu.comperd.befekt.dto.Kiadas;
 import hu.comperd.befekt.etc.Response;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.services.KiadasServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Kiadások")
 @RequestMapping(value = "/kiadasok")
 public class KiadasServiceController extends BaseController {
   @Autowired
@@ -25,7 +28,11 @@ public class KiadasServiceController extends BaseController {
 
   @PostMapping(value = "")
   public ResponseEntity<Object> createKiadas(@RequestBody final Kiadas kiadas) {
-    this.processRequest(o -> kiadasService.create(kiadas));
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> this.kiadasService.create(kiadas));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    }
     return new ResponseEntity<>("Kiadas is created successfully", HttpStatus.CREATED);
   }
 
@@ -33,7 +40,9 @@ public class KiadasServiceController extends BaseController {
   public ResponseEntity<Object> updateKiadas(@RequestBody final Kiadas kiadas) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> kiadasService.update(kiadas));
     final Object retData = retObj.getBody().getData();
-    if (retData instanceof MegvaltozottTartalomException) {
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    } else if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
     }
     return new ResponseEntity<>("Kiadás is updated successfully", HttpStatus.OK);
@@ -66,7 +75,9 @@ public class KiadasServiceController extends BaseController {
                                                       @PathVariable("mddat") final String mddat) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> kiadasService.szamlaForgTorl(id, mddat));
     final Object retData = retObj.getBody().getData();
-    if (retData instanceof MegvaltozottTartalomException) {
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    } else if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
     } else if (retData instanceof ParositottSzamlaforgalmiTetelException) {
       throw (ParositottSzamlaforgalmiTetelException)retData;

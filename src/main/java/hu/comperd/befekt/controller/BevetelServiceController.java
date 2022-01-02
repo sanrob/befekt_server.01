@@ -7,11 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import hu.comperd.befekt.dto.Bevetel;
 import hu.comperd.befekt.etc.Response;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.services.BevetelServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Bevételek")
 @RequestMapping(value = "/bevetels")
 public class BevetelServiceController extends BaseController {
   @Autowired
@@ -25,7 +28,11 @@ public class BevetelServiceController extends BaseController {
 
   @PostMapping(value = "")
   public ResponseEntity<Object> createBevetel(@RequestBody final Bevetel bevetel) {
-    this.processRequest(o -> bevetelService.create(bevetel));
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> bevetelService.create(bevetel));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    }
     return new ResponseEntity<>("Bevetel is created successfully", HttpStatus.CREATED);
   }
 
@@ -33,7 +40,9 @@ public class BevetelServiceController extends BaseController {
   public ResponseEntity<Object> updateBevetel(@RequestBody final Bevetel bevetel) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> bevetelService.update(bevetel));
     final Object retData = retObj.getBody().getData();
-    if (retData instanceof MegvaltozottTartalomException) {
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    } else if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
     }
     return new ResponseEntity<>("Bevetel is updated successfully", HttpStatus.OK);
@@ -50,7 +59,7 @@ public class BevetelServiceController extends BaseController {
     return new ResponseEntity<>("Bevetel is deleted successfully", HttpStatus.OK);
   }
 
-  @DeleteMapping(value = "/szamlakonyveles/{id}/{mddat}")
+  @PutMapping(value = "/szamlakonyveles/{id}/{mddat}")
   public ResponseEntity<Object> szlakonyvBevetel(@PathVariable("id") final String id,
                                                  @PathVariable("mddat") final String mddat) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> bevetelService.szamlaForgGen(id, mddat));
@@ -70,6 +79,8 @@ public class BevetelServiceController extends BaseController {
       throw (MegvaltozottTartalomException)retData;
     } else if (retData instanceof ParositottSzamlaforgalmiTetelException) {
       throw (ParositottSzamlaforgalmiTetelException)retData;
+    } else if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
     }
     return new ResponseEntity<>("Bevétel tétel számlakönyvelése törlése sikeres!", HttpStatus.OK);
   }

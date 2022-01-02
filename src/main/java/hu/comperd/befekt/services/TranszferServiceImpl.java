@@ -2,9 +2,9 @@ package hu.comperd.befekt.services;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +12,9 @@ import org.springframework.stereotype.Service;
 import hu.comperd.befekt.collections.SzamlaForgalomCol;
 import hu.comperd.befekt.collections.TranszferCol;
 import hu.comperd.befekt.dto.Transzfer;
-import hu.comperd.befekt.etc.DomainCsoportok;
 import hu.comperd.befekt.etc.DomainErtekek;
 import hu.comperd.befekt.etc.SzamlaKonyvTmp;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
 import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.repositories.DomainRepository;
@@ -41,33 +41,15 @@ public class TranszferServiceImpl {
   private DomainRepository         domrepo;
 
   public List<Transzfer> findAll(final String konyvEv) {
-    final List<TranszferCol> transzferCols = this.repository.findAllByTraEvOrderByTraDatumDesc(Integer.parseInt(konyvEv));
-    final List<Transzfer> transzfers = new ArrayList<>();
-    for (final TranszferCol transzferCol : transzferCols) {
-      final Transzfer transzfer = new Transzfer();
-      transzfer.setId(transzferCol.getId());
-      transzfer.setTraAzon(transzferCol.getTraAzon() == null ? "" : transzferCol.getTraAzon());
-      transzfer.setTraHonnan(transzferCol.getTraHonnan());
-      transzfer.setTraHonnanNev(szarepo.findBySzaKod(transzferCol.getTraHonnan()).getSzaMegnev());
-      transzfer.setTraHova(transzferCol.getTraHova());
-      transzfer.setTraHovaNev(szarepo.findBySzaKod(transzferCol.getTraHova()).getSzaMegnev());
-      transzfer.setTraLeiras(transzferCol.getTraLeiras());
-      transzfer.setTraDatum(transzferCol.getTraDatum());
-      transzfer.setTraTerheles(transzferCol.getTraTerheles());
-      transzfer.setTraArfolyam(transzferCol.getTraArfolyam());
-      transzfer.setTraJovairas(transzferCol.getTraJovairas());
-      transzfer.setTraJutalek(transzferCol.getTraJutalek());
-      transzfer.setTraJutKonyv(transzferCol.getTraJutKonyv());
-      transzfer.setTraJutKonyvNev(
-          domrepo.findByDomCsoportKodAndDomKod(DomainCsoportok.TRAJUTKON, transzferCol.getTraJutKonyv()).getDomMegnev());
-      transzfer.setTraSzamlaKonyv(transzferCol.isTraSzamlaKonyv());
-      transzfer.setTraMddat(transzferCol.getTraMddat());
-      transzfers.add(transzfer);
-    }
-    return transzfers;
+    return this.repository.findAllByTraEvOrderByTraDatumDesc(Integer.parseInt(konyvEv))
+        .stream().parallel().map(Transzfer::new).map(transzfer -> transzfer.setDatas(this.szarepo, this.domrepo))
+        .collect(Collectors.toList());
   }
 
   public Object create(final Transzfer transzfer) {
+    if (alapAdatokService.isIdoszakLezart(transzfer.getTraDatum())) {
+      return new KonyvelesiIdoszakLezartException(transzfer.getTraDatum().toString().substring(0, 7), "transzfer fölvitele");
+    }
     final TranszferCol transzferCol = new TranszferCol(transzfer);
     final int sorszam = this.alapAdatokService.getNextBizSorsz(DomainErtekek.BIZTIP_TRANSZFER, transzfer.getTraDatum().getYear());
     transzferCol.setTraAzon(
@@ -78,6 +60,9 @@ public class TranszferServiceImpl {
   }
 
   public Object update(final Transzfer transzfer) {
+    if (alapAdatokService.isIdoszakLezart(transzfer.getTraDatum())) {
+      return new KonyvelesiIdoszakLezartException(transzfer.getTraDatum().toString().substring(0, 7), "transzfer módosítása");
+    }
     final Optional<TranszferCol> transzferObj = this.repository.findById(transzfer.getId());
     if (transzferObj.isPresent()) {
       final TranszferCol transzferCol = transzferObj.get();
@@ -173,30 +158,33 @@ public class TranszferServiceImpl {
     if (transzferObj.isPresent()) {
       final TranszferCol transzferCol = transzferObj.get();
       final ZonedDateTime pMddat = ZonedDateTime.parse(mddat);
-      if (transzferCol.getTraMddat().equals(pMddat)) {
-        final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
-            DomainErtekek.BIZTIP_TRANSZFER, transzferCol.getTraAzon());
-        String parosAzon = null;
-        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-          if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
-            parosAzon = szlaForgTetel.getSzfAzon();
-          }
-        }
-        if (parosAzon == null) {
-          for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
-            this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
-                szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
-            this.szlaForgRepo.delete(szlaForgTetel);
-          }
-          transzferCol.setTraSzamlaKonyv(false);
-          transzferCol.setTraMddat(ZonedDateTime.now(ZoneId.systemDefault()));
-          this.repository.save(transzferCol);
-          logger.info("Számlakönyvelés törölve Record: {}", transzferCol);
-        } else {
-          return new ParositottSzamlaforgalmiTetelException(parosAzon);
-        }
-      } else {
+      if (!transzferCol.getTraMddat().equals(pMddat)) {
         return new MegvaltozottTartalomException("Transzfer", "számlakönyvelés törlése");
+      }
+      if (this.alapAdatokService.isIdoszakLezart(transzferCol.getTraDatum())) {
+        return new KonyvelesiIdoszakLezartException(
+            transzferCol.getTraDatum().toString().substring(0, 7), "transzfer számlakönyvelésének törlése");
+      }
+      final List<SzamlaForgalomCol> szlaForgTetelek = this.szlaForgRepo.findAllBySzfHivBizTipAndSzfHivBizAzon(
+          DomainErtekek.BIZTIP_TRANSZFER, transzferCol.getTraAzon());
+      String parosAzon = null;
+      for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+        if (Math.round(szlaForgTetel.getSzfParos() * 100) != 0) {
+          parosAzon = szlaForgTetel.getSzfAzon();
+        }
+      }
+      if (parosAzon == null) {
+        for (final SzamlaForgalomCol szlaForgTetel : szlaForgTetelek) {
+          this.szamlaKonyveles.szamlaOsszesenKonyveles(szlaForgTetel.getSzfSzaKod(), szlaForgTetel.getSzfForgDat(),
+              szlaForgTetel.getSzfTKJel(), -1 * szlaForgTetel.getSzfOsszeg());
+          this.szlaForgRepo.delete(szlaForgTetel);
+        }
+        transzferCol.setTraSzamlaKonyv(false);
+        transzferCol.setTraMddat(ZonedDateTime.now(ZoneId.systemDefault()));
+        this.repository.save(transzferCol);
+        logger.info("Számlakönyvelés törölve Record: {}", transzferCol);
+      } else {
+        return new ParositottSzamlaforgalmiTetelException(parosAzon);
       }
     }
     return null;

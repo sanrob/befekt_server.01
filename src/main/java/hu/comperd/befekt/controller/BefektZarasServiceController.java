@@ -9,10 +9,14 @@ import hu.comperd.befekt.dto.BefektZaras;
 import hu.comperd.befekt.dto.HozamBeallito;
 import hu.comperd.befekt.dto.NyitasZarasParok;
 import hu.comperd.befekt.etc.Response;
+import hu.comperd.befekt.exceptions.KonyvelesiIdoszakLezartException;
 import hu.comperd.befekt.exceptions.MegvaltozottTartalomException;
+import hu.comperd.befekt.exceptions.ParositottSzamlaforgalmiTetelException;
 import hu.comperd.befekt.services.BefektZarasServiceImpl;
+import io.swagger.annotations.Api;
 
 @RestController
+@Api(tags = "Befektetések zárása")
 @RequestMapping(value = "/befektzarasok")
 public class BefektZarasServiceController extends BaseController {
   @Autowired
@@ -26,7 +30,11 @@ public class BefektZarasServiceController extends BaseController {
 
   @PostMapping(value = "")
   public ResponseEntity<Object> createBefektZaras(@RequestBody final BefektZaras befektZaras) {
-    this.processRequest(o -> befektZarasService.create(befektZaras));
+    final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektZarasService.create(befektZaras));
+    final Object retData = retObj.getBody().getData();
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    }
     return new ResponseEntity<>("Befektetes zárás is created successfully", HttpStatus.CREATED);
   }
 
@@ -34,7 +42,9 @@ public class BefektZarasServiceController extends BaseController {
   public ResponseEntity<Object> updateBefektZaras(@RequestBody final BefektZaras befektZaras) {
     final ResponseEntity<Response<Object>> retObj = this.processRequest(o -> befektZarasService.update(befektZaras));
     final Object retData = retObj.getBody().getData();
-    if (retData instanceof MegvaltozottTartalomException) {
+    if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
+    } else if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
     }
     return new ResponseEntity<>("Befektetes zárás is updated successfully", HttpStatus.OK);
@@ -69,6 +79,8 @@ public class BefektZarasServiceController extends BaseController {
     final Object retData = retObj.getBody().getData();
     if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
+    } else if (retData instanceof KonyvelesiIdoszakLezartException) {
+      throw (KonyvelesiIdoszakLezartException)retData;
     }
     return new ResponseEntity<>("Befektetés zárás tétel számlakönyvelése törlése sikeres!", HttpStatus.OK);
   }
@@ -125,6 +137,9 @@ public class BefektZarasServiceController extends BaseController {
     final Object retData = retObj.getBody().getData();
     if (retData instanceof MegvaltozottTartalomException) {
       throw (MegvaltozottTartalomException)retData;
+    }
+    if (retData instanceof ParositottSzamlaforgalmiTetelException) {
+      throw (ParositottSzamlaforgalmiTetelException)retData;
     }
     return new ResponseEntity<>("Hozam tétel számlakönyvelése törlése sikeres!", HttpStatus.OK);
   }

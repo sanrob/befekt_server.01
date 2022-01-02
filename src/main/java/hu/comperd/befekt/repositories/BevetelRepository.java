@@ -8,7 +8,9 @@ public interface BevetelRepository extends MongoRepository<BevetelCol, String> {
 
   public BevetelCol findByBevAzon(String bevAzon);
 
-  public List<BevetelCol> findAllByBevEvOrderByBevDatumDesc(int bevEv);
+  public List<BevetelCol> findAllByBevEvOrderByBevDatumDesc(final int bevEv);
 
   public List<BevetelCol> findByBevSzamla(String bevSzamla);
+
+  public List<BevetelCol> findAllByBevEvAndBevSzlaKonyv(final int bevEv, final boolean bevSzlaKonyv);
 }
